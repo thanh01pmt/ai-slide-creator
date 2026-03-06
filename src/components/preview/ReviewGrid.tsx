@@ -1,4 +1,4 @@
-import { SlideArticle } from './slides/SlideArticle';
+import { SlideArticle } from '../slides/SlideArticle';
 import {
     HeroSlide, SectionSlide, ConceptSlide, ActivitySlide,
     Grid6Slide, TwoColSlide, StatCardsSlide, QuoteSlide,
@@ -6,7 +6,7 @@ import {
     PersonIntroSlide, CodeQuestionSlide, ImageTextSlide,
     DemoSlide, CheckpointSlide, NextLessonSlide,
     Team3Slide, PreviewSlide
-} from './slides/SlideTypes';
+} from '../slides/SlideTypes';
 
 interface SlideData {
     type: string;

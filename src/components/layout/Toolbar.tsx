@@ -33,7 +33,7 @@ export function Toolbar({ slideCount, mode, onModeChange, onFormat, onExportPptx
               ${mode === 'slides' ? 'bg-white text-primary shadow-sm' : 'text-text/40 hover:text-text/60'}`}
                     >
                         <Monitor className="h-3.5 w-3.5" />
-                        🖥 Slides
+                        Slides
                     </button>
                     <button
                         onClick={() => onModeChange('review')}
@@ -41,7 +41,7 @@ export function Toolbar({ slideCount, mode, onModeChange, onFormat, onExportPptx
               ${mode === 'review' ? 'bg-white text-primary shadow-sm' : 'text-text/40 hover:text-text/60'}`}
                     >
                         <LayoutGrid className="h-3.5 w-3.5" />
-                        📖 Review
+                        Review
                     </button>
                 </div>
 
