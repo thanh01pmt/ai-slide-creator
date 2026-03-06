@@ -42,19 +42,53 @@ const COMPONENTS: Record<string, React.FC<{ data: any }>> = {
     PREVIEW: PreviewSlide,
 };
 
+import { useEffect, useRef, useState } from 'react';
+
 export function SlideCanvas({ type, data, index }: SlideCanvasProps) {
     const SlideComp = COMPONENTS[type];
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [scale, setScale] = useState(0.3); // Default small scale
+
+    useEffect(() => {
+        const updateScale = () => {
+            if (containerRef.current) {
+                const width = containerRef.current.offsetWidth;
+                setScale(width / 960);
+            }
+        };
+
+        updateScale();
+        window.addEventListener('resize', updateScale);
+
+        // Also observe the element itself since parents might change size
+        const observer = new ResizeObserver(updateScale);
+        if (containerRef.current) observer.observe(containerRef.current);
+
+        return () => {
+            window.removeEventListener('resize', updateScale);
+            observer.disconnect();
+        };
+    }, []);
 
     return (
-        <div className="group relative w-full aspect-video bg-white rounded-xl shadow-sm border border-primary/5 overflow-hidden hover:border-primary/40 transition-all cursor-pointer">
+        <div
+            ref={containerRef}
+            className="group relative w-full aspect-video bg-[var(--s-bg)] rounded-xl shadow-2xl border border-white/5 overflow-hidden hover:border-primary/40 transition-all cursor-pointer"
+        >
             {/* 960x540 internal container, scaled to fit parent width */}
-            <div className="absolute top-0 left-0 w-[960px] h-[540px] origin-top-left overflow-hidden bg-white"
-                style={{ transform: `scale(calc(100% / 960))` }}>
-                <div className="p-10 h-full flex flex-col justify-center">
+            <div
+                className="absolute top-0 left-0 w-[960px] h-[540px] origin-top-left overflow-hidden bg-[var(--s-bg)] text-[var(--s-white)] font-slide-body"
+                style={{ transform: `scale(${scale})` }}
+            >
+                {/* Glow Effects (Wow factor) */}
+                <div className="absolute top-[-100px] right-[-100px] w-[600px] h-[600px] bg-[var(--s-primary)] opacity-10 rounded-full blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] bg-[var(--s-secondary)] opacity-10 rounded-full blur-[100px] pointer-events-none" />
+
+                <div className="p-12 h-full flex flex-col justify-center relative z-10">
                     {SlideComp ? (
                         <SlideComp data={data} />
                     ) : (
-                        <div className="flex items-center justify-center h-full text-text/20 font-heading text-4xl font-bold uppercase tracking-tighter italic">
+                        <div className="flex items-center justify-center h-full text-white/5 font-slide-heading text-8xl font-black uppercase italic">
                             {type}
                         </div>
                     )}

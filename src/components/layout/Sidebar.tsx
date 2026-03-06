@@ -1,11 +1,12 @@
-import { Layout, FileJson, Sparkles, Palette, SquareSlash } from 'lucide-react';
+import { FileJson, Sparkles, Palette, SquareSlash } from 'lucide-react';
 
 interface SidebarProps {
     activeTab: string;
     onTabChange: (tab: string) => void;
+    editorSlot?: React.ReactNode;
 }
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, editorSlot }: SidebarProps) {
     const tabs = [
         { id: 'json', icon: FileJson, label: 'JSON' },
         { id: 'ai', icon: Sparkles, label: 'AI Convert' },
@@ -14,8 +15,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     ];
 
     return (
-        <div className="w-[420px] border-r border-primary/10 flex flex-col bg-white h-full overflow-hidden shrink-0">
-            <div className="flex border-b border-primary/10">
+        <div className="w-[450px] border-r border-primary/10 flex flex-col bg-white h-full overflow-hidden shrink-0 shadow-2xl z-20">
+            <div className="flex border-b border-primary/10 bg-white">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
@@ -26,12 +27,12 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                                 : 'border-transparent text-text/40 hover:text-text/60 hover:bg-black/5'}`}
                     >
                         <tab.icon className="h-5 w-5 mb-1" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">{tab.label}</span>
+                        <span className="text-xs font-bold uppercase tracking-wider">{tab.label}</span>
                     </button>
                 ))}
             </div>
-            <div className="flex-1 overflow-y-auto p-4 bg-background/30">
-                {/* Tab content will be rendered here via Parent */}
+            <div className="flex-1 overflow-y-auto p-6 bg-white relative">
+                {editorSlot}
             </div>
         </div>
     );

@@ -36,6 +36,12 @@ export function useSlideState(initialSlides: SlideData[] = []) {
 
 	const slideCount = useMemo(() => slides.length, [slides]);
 
+	const setSlidesWithJson = useCallback((newSlides: SlideData[]) => {
+		setSlides(newSlides);
+		setRawJson(JSON.stringify(newSlides, null, 2));
+		setError(null);
+	}, []);
+
 	return {
 		slides,
 		rawJson,
@@ -43,6 +49,6 @@ export function useSlideState(initialSlides: SlideData[] = []) {
 		slideCount,
 		updateJson,
 		formatJson,
-		setSlides,
+		setSlides: setSlidesWithJson,
 	};
 }

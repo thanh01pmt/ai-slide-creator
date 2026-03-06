@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Sparkles, Wand2 } from 'lucide-react';
+import { useAiConvert } from '@/hooks/useAiConvert';
 
 interface AiConvertPaneProps {
     onSuccess: (slides: any[]) => void;
@@ -9,21 +10,24 @@ interface AiConvertPaneProps {
 export function AiConvertPane({ onSuccess }: AiConvertPaneProps) {
     const [source, setSource] = useState('');
     const [style, setStyle] = useState('lesson');
-    const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<{ type: 'idle' | 'thinking' | 'done' | 'err', msg: string }>({ type: 'idle', msg: '' });
+    const { convert, loading, error: aiError } = useAiConvert();
 
     const runAI = async () => {
         if (!source.trim()) {
             setStatus({ type: 'err', msg: '⚠ Vui lòng nhập nội dung' });
             return;
         }
-        setLoading(true);
-        setStatus({ type: 'thinking', msg: '✨ AI đang xử lý...' });
 
-        setTimeout(() => {
-            setLoading(false);
-            setStatus({ type: 'err', msg: '✗ Cần cấu hình API Key để chạy AI.' });
-        }, 1500);
+        setStatus({ type: 'thinking', msg: '✨ AI đang xử lý...' });
+        const result = await convert(source, style);
+
+        if (result) {
+            onSuccess(result);
+            setStatus({ type: 'done', msg: `✓ Tạo ${result.length} slides thành công` });
+        } else if (aiError) {
+            setStatus({ type: 'err', msg: `✗ ${aiError}` });
+        }
     };
 
     return (
@@ -57,7 +61,7 @@ export function AiConvertPane({ onSuccess }: AiConvertPaneProps) {
                     className="flex-1 w-full p-4 bg-white border-2 border-primary/10 rounded-xl text-sm resize-none focus:border-primary outline-none transition-colors"
                 />
 
-                <div className={`p-3 rounded-xl text-xs font-bold shadow-sm transition-all
+                <div className={`p-3 rounded-xl text-sm font-bold shadow-sm transition-all
           ${status.type === 'err' ? 'bg-red-50 text-red-500' :
                         status.type === 'thinking' ? 'bg-amber-50 text-amber-600 animate-pulse' :
                             status.type === 'done' ? 'bg-cta/10 text-cta' : 'bg-primary/5 text-primary/40'}`}>

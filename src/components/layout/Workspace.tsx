@@ -11,6 +11,7 @@ interface WorkspaceProps {
     onModeChange: (mode: 'slides' | 'review') => void;
     onFormat: () => void;
     onExportPptx: () => void;
+    editorSlot?: React.ReactNode;
 }
 
 export function Workspace({
@@ -21,7 +22,8 @@ export function Workspace({
     mode,
     onModeChange,
     onFormat,
-    onExportPptx
+    onExportPptx,
+    editorSlot
 }: WorkspaceProps) {
     return (
         <div className="h-screen flex flex-col overflow-hidden bg-background">
@@ -33,8 +35,12 @@ export function Workspace({
                 onExportPptx={onExportPptx}
             />
             <div className="flex-1 flex overflow-hidden">
-                <Sidebar activeTab={activeTab} onTabChange={onTabChange} />
-                <main className="flex-1 overflow-y-auto p-8 relative">
+                <Sidebar
+                    activeTab={activeTab}
+                    onTabChange={onTabChange}
+                    editorSlot={editorSlot}
+                />
+                <main className="flex-1 overflow-y-auto relative bg-[#0a1219]">
                     {children}
                 </main>
             </div>

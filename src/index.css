@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Comic+Neue:wght@300;400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Comic+Neue:wght@300;400;700&family=Inter:wght@400;500;600;700&family=Lexend:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Poppins:wght@300;400;500;600;700&family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -21,6 +21,27 @@
 	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
 	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
 	--shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+
+	/* Slide Studio Theme Variables */
+	--s-bg: #16242f;
+	--s-surface: #1f3240;
+	--s-surface2: #243b4d;
+	--s-surface3: #2a3f52;
+	--s-dark: #0e1c28;
+	--s-white: #e8edf2;
+	--s-muted: #6b8a9e;
+	--s-pink: #eb8fd8;
+	--s-purple: #ba94e9;
+	--s-sage: #b9d4b4;
+	--s-coral: #f46659;
+	--s-amber: #ffbc3e;
+	--s-green: #1cc549;
+	--s-cyan: #0097a7;
+
+	/* Font Variables - Original Legacy Standards */
+	--s-font-heading: "Syne", sans-serif;
+	--s-font-body: "DM Sans", sans-serif;
+	--s-font-mono: "JetBrains Mono", monospace;
 }
 
 @layer base {

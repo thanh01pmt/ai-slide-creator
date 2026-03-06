@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/Button";
 import { SquareSlash, Plus } from 'lucide-react';
 
 interface StructurePaneProps {
@@ -47,14 +46,14 @@ export function StructurePane({ onInsert }: StructurePaneProps) {
                         className="group flex flex-col p-3 rounded-xl border border-primary/5 bg-white hover:border-primary/40 hover:shadow-md transition-all cursor-pointer"
                     >
                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${t.color}20`, color: t.color }}>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded" style={{ backgroundColor: `${t.color}20`, color: t.color }}>
                                 {t.type}
                             </span>
-                            <div className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-primary flex items-center gap-1">
-                                <Plus className="h-3 w-3" /> INSERT
+                            <div className="opacity-0 group-hover:opacity-100 text-xs font-bold text-primary flex items-center gap-1">
+                                <Plus className="h-4 w-4" /> INSERT
                             </div>
                         </div>
-                        <div className="text-[11px] text-text/60 line-clamp-1">{t.desc}</div>
+                        <div className="text-xs text-text/60 line-clamp-1">{t.desc}</div>
                     </div>
                 ))}
             </div>

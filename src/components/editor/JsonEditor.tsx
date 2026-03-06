@@ -17,10 +17,19 @@ export function JsonEditor({ value, onChange, error, onFormat }: JsonEditorProps
                     <FileCode className="h-5 w-5" /> Slide JSON
                 </h3>
                 <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={onFormat} className="text-[10px] h-7 px-3">
+                    <Button variant="ghost" size="sm" onClick={() => {
+                        const confirm = window.confirm('Tải dữ liệu mẫu sẽ ghi đè nội dung hiện tại. Tiếp tục?');
+                        if (confirm) onChange('EXAMPLE'); // We'll handle 'EXAMPLE' string in the parent or pass a specific data
+                    }} className="text-xs h-8 px-3">
+                        Example
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={onFormat} className="text-xs h-8 px-3">
                         Format
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => onChange('[]')} className="text-[10px] h-7 px-3">
+                    <Button variant="ghost" size="sm" onClick={() => {
+                        const confirm = window.confirm('Xóa toàn bộ slides?');
+                        if (confirm) onChange('[]');
+                    }} className="text-xs h-8 px-3">
                         Clear
                     </Button>
                 </div>
@@ -37,7 +46,7 @@ export function JsonEditor({ value, onChange, error, onFormat }: JsonEditorProps
                 />
             </div>
 
-            <div className={`text-[11px] font-medium p-2 rounded-lg 
+            <div className={`text-xs font-medium p-2 rounded-lg 
         ${error ? 'bg-red-50 text-red-500' : 'bg-cta/5 text-cta'}`}>
                 {error ? `✗ ${error}` : '✓ JSON is valid'}
             </div>

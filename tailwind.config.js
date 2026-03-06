@@ -15,8 +15,11 @@ export default {
         accent: "#EB8FD8", // Keeping the slide pink for variety
       },
       fontFamily: {
-        heading: ["Baloo 2", "cursive"],
-        body: ["Comic Neue", "cursive"],
+        heading: ["Inter", "sans-serif"],
+        body: ["Montserrat", "sans-serif"],
+        "slide-heading": ["var(--s-font-heading)", "sans-serif"],
+        "slide-body": ["var(--s-font-body)", "sans-serif"],
+        "slide-mono": ["var(--s-font-mono)", "monospace"],
       },
     },
   },
