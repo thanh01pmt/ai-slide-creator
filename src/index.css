@@ -1,0 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700&family=Comic+Neue:wght@300;400;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--color-primary: #4f46e5;
+	--color-secondary: #818cf8;
+	--color-cta: #22c55e;
+	--color-background: #eef2ff;
+	--color-text: #312e81;
+
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 16px;
+	--space-lg: 24px;
+	--space-xl: 32px;
+
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+	--shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+}
+
+@layer base {
+	body {
+		@apply bg-background text-text font-body;
+	}
+}
+
+/* LearnWell custom utility classes from Demo.tsx */
+.card-modern {
+	@apply bg-white rounded-[16px] p-6 shadow-md transition-all duration-200 cursor-pointer;
+}
+
+.card-modern:hover {
+	@apply shadow-lg -translate-y-[2px];
+}
+
+.icon-box-primary {
+	@apply h-10 w-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary;
+}
+.icon-box-success {
+	@apply h-10 w-10 rounded-xl flex items-center justify-center bg-cta/10 text-cta;
+}
+.icon-box-accent {
+	@apply h-10 w-10 rounded-xl flex items-center justify-center bg-accent/10 text-accent;
+}

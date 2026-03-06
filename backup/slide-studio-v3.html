@@ -1,0 +1,2334 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slide Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — from PPTX theme1.xml
+───────────────────────────────────────────────────────────── */
+:root {
+  --bg:       #16242F;
+  --surface:  #1F3240;
+  --surface2: #243B4D;
+  --surface3: #2A3F52;
+  --pink:     #EB8FD8;
+  --purple:   #BA94E9;
+  --sage:     #B9D4B4;
+  --coral:    #F46659;
+  --amber:    #FFBC3E;
+  --green:    #1CC549;
+  --cyan:     #0097A7;
+  --white:    #E8EDF2;
+  --muted:    #6B8A9E;
+  --dark:     #0E1C28;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+  --radius:   10px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   RESET
+───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { background: var(--bg); color: var(--white); font-family: var(--font-body); line-height: 1.5; }
+
+/* ─────────────────────────────────────────────────────────────
+   APP SHELL (desktop only)
+───────────────────────────────────────────────────────────── */
+#app {
+  display: grid;
+  grid-template-rows: 52px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+#toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface3);
+  gap: 12px;
+  z-index: 100;
+}
+.tbar-left  { display: flex; align-items: center; gap: 12px; }
+.tbar-right { display: flex; align-items: center; gap: 8px; }
+.logo { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--pink); letter-spacing: -0.3px; white-space: nowrap; }
+.logo em { color: var(--muted); font-style: normal; font-weight: 500; font-family: var(--font-body); font-size: 13px; }
+.chip { font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+
+/* mode toggle */
+.mode-toggle {
+  display: flex; background: var(--surface2); border-radius: 8px; padding: 3px; gap: 2px;
+}
+.mode-btn {
+  font-family: var(--font-body); font-size: 11px; font-weight: 600;
+  padding: 4px 12px; border-radius: 6px; border: none; cursor: pointer;
+  background: transparent; color: var(--muted); transition: all .15s;
+}
+.mode-btn.active { background: var(--surface3); color: var(--white); }
+
+.btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 8px; border: none;
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--surface3); }
+.btn-ghost:hover { color: var(--white); border-color: var(--muted); }
+.btn-primary { background: var(--pink); color: #1a0b2e; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.status-dot.err { background: var(--coral); }
+
+/* workspace split */
+#workspace {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  overflow: hidden;
+}
+
+
+/* ─────────────────────────────────────────────────────────────
+   LEFT PANEL — tabbed (JSON / AI / Theme)
+───────────────────────────────────────────────────────────── */
+#editor-panel {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--surface3);
+  overflow: hidden;
+}
+/* tab bar */
+.tab-bar {
+  display: flex; background: var(--surface2); border-bottom: 1px solid var(--surface3);
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1; padding: 9px 4px; border: none; background: transparent;
+  font-family: var(--font-body); font-size: 11px; font-weight: 700;
+  color: var(--muted); cursor: pointer; transition: all .15s;
+  border-bottom: 2px solid transparent; letter-spacing: .3px;
+}
+.tab-btn:hover { color: var(--white); }
+.tab-btn.active { color: var(--pink); border-bottom-color: var(--pink); }
+
+/* tab pane */
+.tab-pane { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
+.tab-pane.active { display: flex; }
+
+/* JSON tab */
+#json-input {
+  flex: 1; width: 100%; padding: 14px 16px;
+  background: var(--dark); color: #c9d8e3;
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.75;
+  border: none; outline: none; resize: none; tab-size: 2;
+}
+#editor-footer {
+  padding: 7px 14px; background: var(--surface2);
+  border-top: 1px solid var(--surface3);
+  font-size: 11px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.msg-ok  { color: var(--sage); }
+.msg-err { color: var(--coral); }
+
+/* ── AI tab ── */
+#ai-pane { gap: 0; }
+.ai-section {
+  padding: 12px 14px; border-bottom: 1px solid var(--surface3); flex-shrink: 0;
+}
+.ai-section-label {
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+}
+#ai-source {
+  flex: 1; width: 100%; padding: 12px 14px;
+  background: var(--dark); color: #c9d8e3;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.7;
+  border: none; outline: none; resize: none; tab-size: 2; min-height: 0;
+}
+.ai-footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; background: var(--surface2);
+  border-top: 1px solid var(--surface3); flex-shrink: 0; flex-wrap: wrap;
+}
+.ai-status { font-size: 11px; flex: 1; min-width: 0; }
+.ai-status.thinking { color: var(--amber); }
+.ai-status.done     { color: var(--sage); }
+.ai-status.err      { color: var(--coral); }
+/* style select */
+.ai-style-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px 4px;
+  flex-shrink: 0;
+}
+.ai-style-label { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+.ai-style-select {
+  flex: 1; background: var(--dark); border: 1px solid var(--surface3);
+  border-radius: 5px; color: var(--white); font-size: 11px;
+  font-family: var(--font-body); padding: 4px 8px; outline: none;
+}
+.ai-style-select:focus { border-color: var(--purple); }
+
+/* ── THEME tab ── */
+#theme-pane {
+  overflow-y: auto; gap: 0;
+}
+#theme-pane::-webkit-scrollbar { width: 4px; }
+#theme-pane::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+.theme-section {
+  padding: 12px 14px; border-bottom: 1px solid var(--surface3);
+}
+.theme-section-label {
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+}
+.color-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+.color-row {
+  display: flex; align-items: center; gap: 8px;
+}
+.color-row label {
+  font-size: 11px; color: var(--muted); font-family: var(--font-mono);
+  width: 64px; flex-shrink: 0;
+}
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--surface3);
+  cursor: pointer; flex-shrink: 0; transition: transform .1s;
+}
+.color-swatch:hover { transform: scale(1.1); }
+.color-hex {
+  flex: 1; background: var(--dark); border: 1px solid var(--surface3);
+  border-radius: 5px; color: var(--white); font-size: 10px;
+  font-family: var(--font-mono); padding: 4px 6px; outline: none; width: 0;
+}
+.color-hex:focus { border-color: var(--purple); }
+.theme-actions {
+  display: flex; gap: 7px; padding: 10px 14px; flex-shrink: 0;
+  border-top: 1px solid var(--surface3);
+}
+.theme-actions .mini-btn { flex: 1; text-align: center; padding: 5px; }
+
+/* ── STRUCTURE tab ── */
+#struct-pane { overflow-y: auto; gap: 0; }
+#struct-pane::-webkit-scrollbar { width: 4px; }
+#struct-pane::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+.struct-section { padding: 10px 14px; border-bottom: 1px solid var(--surface3); }
+.struct-section-label {
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+}
+.struct-type {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 10px; border-radius: 6px; margin-bottom: 5px;
+  background: var(--dark); cursor: pointer; transition: background .1s;
+}
+.struct-type:hover { background: var(--surface2); }
+.struct-type-badge {
+  font-size: 9px; font-weight: 700; color: var(--dark);
+  padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+  font-family: var(--font-mono);
+}
+.struct-type-info { flex: 1; min-width: 0; }
+.struct-type-name { font-size: 12px; font-weight: 600; color: var(--white); }
+.struct-type-desc { font-size: 10px; color: var(--muted); line-height: 1.4; margin-top: 2px; }
+.struct-type-fields { font-size: 10px; color: var(--cyan); font-family: var(--font-mono); margin-top: 3px; opacity: .8; }
+
+.panel-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 14px; background: var(--surface2);
+  border-bottom: 1px solid var(--surface3); flex-shrink: 0;
+}
+.panel-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.mini-btns { display: flex; gap: 5px; }
+.mini-btn {
+  font-size: 11px; padding: 3px 9px; border-radius: 5px;
+  border: 1px solid var(--surface3); background: transparent;
+  color: var(--muted); cursor: pointer; font-family: var(--font-body); transition: all .1s;
+}
+.mini-btn:hover { color: var(--white); border-color: var(--purple); }
+
+
+/* ─────────────────────────────────────────────────────────────
+   PREVIEW PANEL
+───────────────────────────────────────────────────────────── */
+#preview-panel {
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#preview-viewport {
+  flex: 1; overflow-y: auto; padding: 24px;
+}
+#preview-viewport::-webkit-scrollbar { width: 5px; }
+#preview-viewport::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+/* ─────────────────────────────────────────────────────────────
+   EMPTY STATE
+───────────────────────────────────────────────────────────── */
+#empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 100%; gap: 14px;
+  color: var(--muted); font-size: 14px;
+}
+#empty-state .icon { font-size: 42px; }
+
+/* ═════════════════════════════════════════════════════════════
+   SLIDE GRID (desktop — "slides" view)
+═════════════════════════════════════════════════════════════ */
+#slides-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+  align-content: start;
+}
+.slide-thumb {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.thumb-meta {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; color: var(--muted); font-family: var(--font-mono);
+}
+.thumb-type {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  background: var(--surface2); color: var(--purple); font-weight: 700; letter-spacing: .5px;
+}
+/* The 16:9 frame that contains the scaled slide */
+.thumb-frame {
+  width: 100%; aspect-ratio: 16/9;
+  border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--surface3);
+  box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  transition: border-color .15s;
+  cursor: pointer;
+}
+.thumb-frame:hover { border-color: var(--purple); }
+/* The slide content is rendered at 960×540, then CSS-scaled to fill frame */
+.slide-canvas {
+  width: 960px; height: 540px;
+  transform-origin: top left;
+  /* scale is set via JS based on container width */
+  background: var(--surface);
+  position: relative; overflow: hidden;
+  font-family: var(--font-body);
+}
+
+/* ═════════════════════════════════════════════════════════════
+   REVIEW GRID (desktop — "review" view, wider columns)
+═════════════════════════════════════════════════════════════ */
+#review-grid {
+  display: flex; flex-direction: column; gap: 12px;
+  max-width: 680px; margin: 0 auto;
+}
+
+/* ═════════════════════════════════════════════════════════════
+   SEMANTIC SLIDE ARTICLE
+   This is the SINGLE source of truth rendered in both modes.
+   In "slide" mode → hidden (we render .slide-canvas instead)
+   In "review" mode → shown as a readable card
+   On mobile → always shown as a readable card
+═════════════════════════════════════════════════════════════ */
+.slide-article {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--surface3);
+  overflow: hidden;
+}
+/* slide-number strip */
+.slide-article .s-num {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px 0;
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .8px;
+}
+.slide-article .s-type-badge {
+  font-size: 9px; padding: 1px 6px; border-radius: 3px;
+  background: var(--surface2); color: var(--purple); font-weight: 700;
+}
+
+/* ─── accent bar (top of each article) ─── */
+.slide-article .s-accent { height: 3px; flex-shrink: 0; }
+
+/* ─── inner padding ─── */
+.s-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+/* ─── heading row ─── */
+.s-heading {
+  font-family: var(--font-display); font-size: 1.35rem; font-weight: 800;
+  color: var(--white); line-height: 1.15; letter-spacing: -.3px;
+}
+.s-heading .hl  { color: var(--purple); }
+.s-heading .hl2 { color: var(--sage); }
+.s-heading .hln { color: var(--pink); font-size: 1.6em; opacity: .9; }
+
+/* ─── sub / label ─── */
+.s-label { font-size: .72rem; color: var(--muted); letter-spacing: .4px; font-weight: 500; }
+.s-sub   { font-size: .85rem; color: var(--pink); font-style: italic; }
+
+/* ─── prose ─── */
+.s-prose { font-size: .88rem; color: var(--white); line-height: 1.65; }
+.s-prose .hl  { color: var(--purple); font-weight: 600; }
+.s-prose .hl2 { color: var(--sage);   font-weight: 600; }
+.s-prose .hl3 { color: var(--cyan);   font-weight: 600; }
+
+/* ─── code block ─── */
+.s-code {
+  background: var(--dark); border-radius: 7px;
+  padding: 14px 16px; overflow-x: auto;
+  border-left: 3px solid var(--green);
+}
+.s-code pre {
+  font-family: var(--font-mono); font-size: .78rem;
+  color: var(--sage); line-height: 1.75; margin: 0; white-space: pre;
+}
+.s-code pre .cm { color: var(--muted); font-style: italic; }
+
+/* output line */
+.s-output {
+  background: #060f16; border: 1px solid var(--green);
+  border-radius: 6px; padding: 9px 14px;
+  font-family: var(--font-mono); font-size: .76rem; color: var(--green);
+}
+.s-output::before { content: '▶ '; }
+
+/* ─── stat cards (responsive grid) ─── */
+.s-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.s-stat {
+  background: var(--surface2); border-radius: 8px;
+  padding: 16px 14px; text-align: center;
+  border-top: 3px solid var(--pink);
+}
+.s-stat-val { font-family: var(--font-display); font-size: 2.2rem; font-weight: 800; line-height: 1; }
+.s-stat-lbl { font-size: .72rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+/* ─── grid 6 items ─── */
+.s-grid6 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 9px;
+}
+.s-grid6-item {
+  background: var(--surface2); border-radius: 7px; padding: 12px 14px;
+  border-left: 3px solid var(--pink);
+}
+.s-grid6-num { font-family: var(--font-mono); font-size: .7rem; font-weight: 700; margin-bottom: 4px; }
+.s-grid6-txt { font-size: .8rem; color: var(--white); line-height: 1.4; }
+
+/* ─── list (steps, bullets) ─── */
+.s-steps { display: flex; flex-direction: column; gap: 8px; }
+.s-step  { display: flex; align-items: flex-start; gap: 10px; }
+.s-step-n {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 700; color: var(--dark);
+  background: var(--cyan); margin-top: 1px;
+}
+.s-step-txt { font-size: .85rem; color: var(--white); line-height: 1.5; padding-top: 2px; }
+
+/* ─── callout / analogy ─── */
+.s-callout {
+  background: var(--surface2); border-left: 3px solid var(--amber);
+  border-radius: 6px; padding: 12px 14px;
+}
+.s-callout-lbl { font-size: .72rem; font-weight: 700; color: var(--amber); margin-bottom: 5px; }
+.s-callout-body { font-size: .82rem; color: var(--white); line-height: 1.55; }
+
+/* ─── concept points ─── */
+.s-concepts { display: flex; flex-direction: column; gap: 8px; }
+.s-concept {
+  background: var(--surface2); border-radius: 6px; padding: 11px 14px;
+  border-left: 3px solid var(--cyan);
+}
+.s-concept.alt { border-color: var(--pink); }
+.s-concept-term { font-family: var(--font-mono); font-size: .78rem; font-weight: 700; color: var(--cyan); margin-bottom: 3px; }
+.s-concept.alt .s-concept-term { color: var(--pink); }
+.s-concept-desc { font-size: .8rem; color: var(--white); line-height: 1.45; }
+
+/* ─── target box ─── */
+.s-target {
+  background: var(--surface2); border-left: 3px solid var(--green);
+  border-radius: 6px; padding: 10px 14px;
+  font-size: .82rem; color: var(--green);
+  display: flex; align-items: flex-start; gap: 7px;
+}
+
+/* ─── checkpoint questions ─── */
+.s-questions { display: flex; flex-direction: column; gap: 8px; }
+.s-question {
+  background: var(--dark); border-left: 3px solid var(--cyan);
+  border-radius: 6px; padding: 11px 14px;
+  font-size: .83rem; color: var(--white); line-height: 1.5;
+  counter-increment: q-counter;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.s-question::before {
+  content: counter(q-counter);
+  font-family: var(--font-mono); font-size: .68rem; font-weight: 700;
+  color: var(--cyan); background: rgba(0,151,167,.15);
+  border-radius: 4px; padding: 2px 6px; flex-shrink: 0; margin-top: 1px;
+}
+.s-questions { counter-reset: q-counter; }
+
+/* ─── summary check items ─── */
+.s-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.s-check {
+  background: var(--surface2); border-radius: 6px; padding: 10px 12px;
+  font-size: .8rem; color: var(--white); line-height: 1.4;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.s-check-icon { flex-shrink: 0; font-weight: 700; }
+.s-next {
+  background: var(--surface2); border-radius: 6px; padding: 10px 14px;
+  font-size: .78rem; color: var(--muted); line-height: 1.5;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+
+/* ─── quote ─── */
+.s-quote-wrap { text-align: center; padding: 8px 0; }
+.s-quote-mark { font-size: 3rem; color: var(--white); opacity: .08; line-height: .5; font-family: serif; }
+.s-quote-text {
+  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
+  color: var(--white); line-height: 1.3; margin: 8px 0;
+}
+.s-quote-author { font-family: var(--font-mono); font-size: .75rem; color: var(--green); }
+
+/* ─── two-col prose — stacks on mobile ─── */
+.s-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.s-2col-card {
+  background: var(--surface2); border-radius: 7px; padding: 12px 14px;
+  font-size: .82rem; color: var(--white); line-height: 1.55;
+}
+.s-2col-card ul { padding-left: 1.1em; display: flex; flex-direction: column; gap: 5px; }
+.s-2col-card li { font-size: .8rem; }
+.s-2col-card li .hl { color: var(--cyan); font-weight: 600; }
+
+/* ─── team cards ─── */
+.s-team { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.s-team-card {
+  background: var(--surface2); border-radius: 8px; padding: 16px 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+}
+.s-team-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--dark); display: flex; align-items: center;
+  justify-content: center; font-size: 1.5rem; opacity: .7;
+}
+.s-team-name { font-weight: 700; font-size: .88rem; }
+.s-team-bio  { font-size: .75rem; color: var(--muted); line-height: 1.45; }
+
+/* ─── activity mode badge ─── */
+.s-mode-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .7rem; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; color: var(--dark);
+}
+
+/* ─── next-lesson preview ─── */
+.s-next-lesson {
+  background: var(--surface2); border-radius: 8px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.s-next-label { font-size: .7rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.s-next-title {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; color: var(--white); line-height: 1.2;
+}
+.s-next-title .hl { color: var(--purple); }
+.s-next-body { font-size: .82rem; color: var(--muted); line-height: 1.55; }
+
+/* ─── thank you ─── */
+.s-thankyou { text-align: center; padding: 12px 0; }
+.s-ty-big {
+  font-family: var(--font-display); font-size: 3rem; font-weight: 800;
+  color: var(--white); line-height: 1.1;
+}
+.s-ty-big span { color: var(--sage); }
+.s-ty-question { font-size: .9rem; font-weight: 600; color: var(--white); margin: 12px 0 4px; }
+.s-ty-org { font-family: var(--font-mono); font-size: .78rem; color: var(--muted); }
+.s-ty-url { font-family: var(--font-mono); font-size: .78rem; color: var(--cyan); }
+
+/* ─── person intro ─── */
+.s-person-code {
+  background: var(--dark); border-radius: 7px; padding: 12px 16px;
+  font-family: var(--font-mono); font-size: .78rem; color: var(--sage); line-height: 1.75;
+  border-left: 3px solid var(--surface3);
+  white-space: pre-wrap;
+}
+
+/* ─── image placeholder ─── */
+.s-img-placeholder {
+  background: var(--dark); border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 80px; font-size: 1.6rem; opacity: .25;
+  border: 1px dashed var(--surface3);
+}
+
+/* ─── hero ─── */
+.s-hero-title {
+  font-family: var(--font-display); font-size: 1.9rem; font-weight: 800;
+  color: var(--white); line-height: 1.1; letter-spacing: -.5px;
+}
+.s-hero-code {
+  background: var(--dark); border-radius: 7px; padding: 12px 16px;
+  font-family: var(--font-mono); font-size: .8rem; color: var(--sage); line-height: 1.75;
+  border-left: 3px solid var(--surface3);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SLIDE CANVAS INTERNALS
+   Everything that appears inside .slide-canvas (960×540 fixed)
+   Scaled down via CSS transform in JS.
+   Accent colours and shapes replicate the PPTX template.
+───────────────────────────────────────────────────────────── */
+
+/* macOS-style dots */
+.c-dots { display:flex; gap:5px; padding:0; position:absolute; top:10px; left:12px; z-index:5; }
+.c-dot  { width:8px; height:8px; border-radius:50%; }
+.c-dot.r { background:#FF5F57; } .c-dot.y { background:#FFBD2E; } .c-dot.g { background:#28C840; }
+
+/* Window card */
+.c-win {
+  background: var(--surface2); border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.55);
+  position: absolute; overflow: hidden;
+}
+.c-win .c-dots { top:10px; left:12px; }
+
+/* Accent bar */
+.c-bar { position:absolute; left:0; top:0; width:4px; height:100%; }
+
+/* Typography inside canvas */
+.c-label { font-size:13px; color: var(--muted); letter-spacing:.4px; position:absolute; }
+.c-h1 { font-family: var(--font-display); font-size:48px; font-weight:800; color: var(--white); line-height:1.1; position:absolute; }
+.c-h1.sm { font-size:38px; }
+.c-h2 { font-family: var(--font-display); font-size:28px; font-weight:800; color: var(--white); line-height:1.15; position:absolute; }
+.c-sub  { font-size:16px; color: var(--pink); font-style:italic; position:absolute; }
+.c-code { font-family: var(--font-mono); font-size:14px; color: var(--sage); line-height:1.7; position:absolute; white-space:pre-wrap; }
+.c-muted { font-size:13px; color: var(--muted); position:absolute; }
+.c-num { font-family: var(--font-display); font-weight:800; color: var(--purple); position:absolute; line-height:1; }
+.c-hl  { color: var(--purple); }
+.c-hl2 { color: var(--sage); }
+
+/* Glow orb */
+.c-glow { position:absolute; border-radius:50%; pointer-events:none; }
+
+/* stat */
+.c-stat { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; background:var(--surface2); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.4); overflow:hidden; }
+.c-stat-val { font-family:var(--font-display); font-weight:800; line-height:1; }
+.c-stat-lbl { font-size:13px; color:var(--muted); text-align:center; line-height:1.35; padding:0 8px; }
+.c-stat-bar { width:100%; height:4px; position:absolute; top:0; }
+
+/* grid card */
+.c-gcrd { position:absolute; background:var(--surface2); border-radius:8px; overflow:hidden; }
+.c-gcrd-num { font-family:var(--font-mono); font-weight:700; line-height:1; position:absolute; }
+.c-gcrd-txt { font-size:13px; color:var(--white); line-height:1.35; position:absolute; }
+
+/* quote mark large */
+.c-qmark { position:absolute; font-family:serif; line-height:1; opacity:.1; color:var(--white); }
+
+/* separator line */
+.c-line { position:absolute; background:var(--surface3); }
+
+/* ─────────────────────────────────────────────────────────────
+   RESPONSIVE: MOBILE OVERRIDES
+   On ≤768px: hide editor/toolbar desktop chrome,
+   show only the article list in review mode.
+───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  html { font-size: 15px; }
+  body { overflow-y: auto; }
+
+  #app {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+  #toolbar {
+    position: sticky; top: 0; z-index: 200;
+    padding: 0 14px; height: 48px;
+  }
+  /* hide desktop-only controls */
+  .hide-mobile { display: none !important; }
+
+  #workspace {
+    display: block;
+    overflow: visible;
+  }
+  #editor-panel { display: none; }
+
+  #preview-panel {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+  #preview-viewport {
+    overflow: visible;
+    padding: 0;
+    height: auto;
+  }
+
+  /* force review mode on mobile */
+  #slides-grid  { display: none !important; }
+  #review-grid  { display: flex !important; }
+  #mobile-review-bar { display: flex !important; }
+
+  #review-grid {
+    padding: 0 0 32px;
+    max-width: 100%;
+    gap: 0;
+    border-radius: 0;
+  }
+
+  .slide-article {
+    border-radius: 0;
+    border-left: none; border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--surface3);
+  }
+  .slide-article:first-child { border-top: none; }
+
+  /* bigger text on mobile */
+  .s-heading { font-size: 1.5rem; }
+  .s-hero-title { font-size: 1.6rem; }
+  .s-checks { grid-template-columns: 1fr; }
+  .s-2col   { grid-template-columns: 1fr; }
+
+  /* wider code blocks */
+  .s-code { border-radius: 0; margin: 0 -20px; padding: 14px 20px; }
+  .s-body  { padding: 14px 16px 20px; }
+}
+
+/* ─── Mobile review bar (shown only on mobile) ─── */
+#mobile-review-bar {
+  display: none;
+  align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface3);
+  font-size: 12px; color: var(--muted);
+  position: sticky; top: 48px; z-index: 100;
+}
+#mobile-review-bar strong { color: var(--white); }
+.mobile-progress {
+  height: 2px; background: var(--surface3);
+  flex: 1; border-radius: 2px; margin: 0 12px; overflow: hidden;
+}
+.mobile-progress-bar { height: 100%; background: var(--pink); width: 0%; transition: width .3s; }
+
+/* ─────────────────────────────────────────────────────────────
+   DESKTOP REVIEW MODE (toggle)
+───────────────────────────────────────────────────────────── */
+body.mode-review #slides-grid  { display: none; }
+body.mode-review #review-grid  { display: flex; }
+body.mode-slides #slides-grid  { display: grid; }
+body.mode-slides #review-grid  { display: none; }
+</style>
+</head>
+<body class="mode-slides">
+
+<div id="app">
+  <!-- ── TOOLBAR ── -->
+  <div id="toolbar">
+    <div class="tbar-left">
+      <div class="logo">Slide Studio <em>/ JSON → PPTX</em></div>
+      <div class="chip" id="slide-count">0 slides</div>
+    </div>
+    <div class="tbar-right">
+      <!-- Mode toggle — desktop only -->
+      <div class="mode-toggle hide-mobile">
+        <button class="mode-btn active" id="btn-slides" onclick="setMode('slides')">🖥 Slides</button>
+        <button class="mode-btn"        id="btn-review" onclick="setMode('review')">📖 Review</button>
+        <button class="mode-btn"        id="btn-preview" onclick="alert('🚧 Tính năng preview trước giờ dạy đang phát triển!')">👩‍🏫 Teacher</button>
+      </div>
+      <div class="status-dot" id="status-dot"></div>
+      <button class="btn btn-ghost hide-mobile" onclick="formatJSON()">Format</button>
+      <button class="btn btn-ghost hide-mobile" id="export-html-btn" onclick="exportHTML()" disabled>⬇ HTML</button>
+      <button class="btn btn-primary" id="export-btn" onclick="exportPPTX()" disabled>⬇ PPTX</button>
+    </div>
+  </div>
+
+  <!-- ── MOBILE REVIEW BAR (sticky under toolbar) ── -->
+  <div id="mobile-review-bar">
+    <strong id="mob-slide-info">0 slides</strong>
+    <div class="mobile-progress"><div class="mobile-progress-bar" id="mob-progress"></div></div>
+    <span id="mob-scroll-pct">0%</span>
+  </div>
+
+  <!-- ── WORKSPACE ── -->
+  <div id="workspace">
+
+    <!-- Editor (desktop only) -->
+    <div id="editor-panel">
+
+      <!-- ── TAB BAR ── -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('json')">📄 JSON</button>
+        <button class="tab-btn"        onclick="switchTab('ai')">✨ AI Convert</button>
+        <button class="tab-btn"        onclick="switchTab('theme')">🎨 Theme</button>
+        <button class="tab-btn"        onclick="switchTab('struct')">📐 Structure</button>
+      </div>
+
+      <!-- ── JSON TAB ── -->
+      <div class="tab-pane active" id="json-pane">
+        <div class="panel-hdr">
+          <span class="panel-label">Slide JSON</span>
+          <div class="mini-btns">
+            <button class="mini-btn" onclick="loadExample()">Example</button>
+            <button class="mini-btn" onclick="formatJSON()">Format</button>
+            <button class="mini-btn" onclick="clearEditor()">Clear</button>
+          </div>
+        </div>
+        <textarea id="json-input" spellcheck="false"
+          placeholder='[{"type":"HERO","data":{...}}, ...]'></textarea>
+        <div id="editor-footer">
+          <span id="footer-msg" class="msg-ok">Nhập JSON array của slides vào đây</span>
+        </div>
+      </div>
+
+      <!-- ── AI CONVERT TAB ── -->
+      <div class="tab-pane" id="ai-pane">
+        <div class="ai-section">
+          <div class="ai-section-label">Nội dung đầu vào</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">
+            Dán <strong style="color:var(--white)">Markdown giáo án</strong>, outline, hoặc nội dung bất kỳ vào đây. AI sẽ chuyển thành JSON slides tương ứng.
+          </div>
+        </div>
+        <div class="ai-style-row">
+          <span class="ai-style-label">Phong cách:</span>
+          <select class="ai-style-select" id="ai-style">
+            <option value="lesson">📚 Bài giảng (Lesson)</option>
+            <option value="workshop">🛠 Workshop thực hành</option>
+            <option value="presentation">🎤 Thuyết trình tổng quát</option>
+            <option value="review">🔁 Ôn tập / Review</option>
+          </select>
+        </div>
+        <textarea id="ai-source" spellcheck="false"
+          placeholder="# Buổi 7 — import random&#10;&#10;## Mục tiêu&#10;- Hiểu module là gì&#10;- Dùng được random.choice()&#10;..."></textarea>
+        <div class="ai-footer">
+          <span class="ai-status" id="ai-status">Sẵn sàng</span>
+          <button class="mini-btn" onclick="runAIConvert()" id="ai-run-btn">✨ Convert</button>
+        </div>
+      </div>
+
+      <!-- ── THEME TAB ── -->
+      <div class="tab-pane" id="theme-pane">
+        <div class="theme-section">
+          <div class="theme-section-label">Màu nền</div>
+          <div class="color-grid" id="bg-colors"></div>
+        </div>
+        <div class="theme-section">
+          <div class="theme-section-label">Màu accent</div>
+          <div class="color-grid" id="accent-colors"></div>
+        </div>
+        <div class="theme-section">
+          <div class="theme-section-label">Màu chữ & UI</div>
+          <div class="color-grid" id="ui-colors"></div>
+        </div>
+        <div class="theme-actions">
+          <button class="mini-btn" onclick="resetTheme()">↩ Reset</button>
+          <button class="mini-btn" onclick="copyThemeCSS()">⎘ Copy CSS</button>
+        </div>
+      </div>
+
+      <!-- ── STRUCTURE TAB ── -->
+      <div class="tab-pane" id="struct-pane">
+        <div class="struct-section">
+          <div class="struct-section-label">Slide Types — click để chèn mẫu</div>
+          <div id="struct-list"></div>
+        </div>
+        <div class="struct-section" style="border-bottom:none">
+          <div class="struct-section-label">Prompt cho AI Agent</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:8px">
+            Copy prompt này để dùng với AI Agent tùy chỉnh (Claude, GPT, v.v.)
+          </div>
+          <button class="mini-btn" onclick="copyPrompt()" style="width:100%;text-align:center;padding:7px">
+            📋 Copy System Prompt
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /editor-panel -->
+
+
+    <!-- Preview panel -->
+    <div id="preview-panel">
+      <div id="preview-viewport">
+        <!-- SLIDES GRID (desktop, mode-slides) -->
+        <div id="slides-grid"></div>
+        <!-- REVIEW GRID (desktop mode-review + mobile always) -->
+        <div id="review-grid"></div>
+        <!-- empty -->
+        <div id="empty-state">
+          <div class="icon">🎞</div>
+          <div>Nhập JSON để xem preview</div>
+          <button class="btn btn-ghost" style="margin-top:8px" onclick="loadExample()">Load ví dụ mẫu</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /workspace -->
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+const C = {
+  bg:'#16242F', surface:'#1F3240', surface2:'#243B4D', surface3:'#2A3F52',
+  pink:'#EB8FD8', purple:'#BA94E9', sage:'#B9D4B4', coral:'#F46659',
+  amber:'#FFBC3E', green:'#1CC549', cyan:'#0097A7',
+  white:'#E8EDF2', muted:'#6B8A9E', dark:'#0E1C28',
+};
+const PC = Object.fromEntries(Object.entries(C).map(([k,v])=>[k,v.replace('#','')]));
+const ACCENTS = ['pink','purple','sage','amber','coral','green','cyan'];
+
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function col(name){ return C[name]||name||C.pink; }
+function pcol(name){ return PC[name]||(name||'').replace('#','')||PC.pink; }
+
+// ═══════════════════════════════════════════════════════════════
+// ARTICLE RENDERERS
+// Produce semantic HTML for review mode + mobile.
+// Each returns an <article class="slide-article"> string.
+// ═══════════════════════════════════════════════════════════════
+const ACCENT_CSS = {
+  HERO:'var(--pink)', TITLE:'var(--pink)', PERSON_INTRO:'var(--purple)',
+  GRID_6:'var(--purple)', SECTION:'var(--purple)', CODE_QUESTION:'var(--cyan)',
+  TWO_COL:'var(--cyan)', STAT_CARDS:'var(--amber)', IMAGE_TEXT:'var(--sage)',
+  QUOTE:'var(--sage)', NEXT_LESSON:'var(--green)', TEAM_3:'var(--pink)',
+  THANK_YOU:'var(--green)', CONCEPT:'var(--amber)', DEMO:'var(--green)',
+  ACTIVITY:'var(--cyan)', CHECKPOINT:'var(--cyan)', SUMMARY:'var(--purple)',
+  PREVIEW:'var(--green)',
+};
+
+function article(type, num, inner){
+  const accent = ACCENT_CSS[type] || 'var(--purple)';
+  return `<article class="slide-article">
+    <div class="s-accent" style="background:${accent}"></div>
+    <div class="s-num"><span>${num}</span><span class="s-type-badge">${esc(type)}</span></div>
+    <div class="s-body">${inner}</div>
+  </article>`;
+}
+
+const ARTICLES = {
+  HERO(d, n){
+    return article('HERO', n, `
+      <div class="s-hero-title">${esc(d.title||'')}</div>
+      ${d.code ? `<div class="s-hero-code">${esc(d.code)}</div>` : ''}
+    `);
+  },
+  TITLE(d, n){
+    return article('TITLE', n, `
+      ${d.label ? `<div class="s-label">${esc(d.label)}</div>` : ''}
+      <div class="s-heading">${esc(d.title||'')}</div>
+      ${d.subtitle ? `<div class="s-sub">${esc(d.subtitle)}</div>` : ''}
+    `);
+  },
+  PERSON_INTRO(d, n){
+    return article('PERSON_INTRO', n, `
+      <div class="s-heading"><span class="hl">${esc(d.heading||'HELLO!')}</span> ${esc(d.heading_highlight||"I'm…")}</div>
+      ${d.body_code ? `<div class="s-person-code">${esc(d.body_code)}</div>` : ''}
+      <div class="s-img-placeholder">👤</div>
+    `);
+  },
+  GRID_6(d, n){
+    const accent = ['pink','purple','sage','pink','purple','sage'];
+    const items = (d.items||[]).slice(0,6).map((item,i)=>`
+      <div class="s-grid6-item" style="border-color:${col(accent[i])}">
+        <div class="s-grid6-num" style="color:${col(accent[i])}">${String(i+1).padStart(2,'0')}</div>
+        <div class="s-grid6-txt">${esc(item)}</div>
+      </div>`).join('');
+    return article('GRID_6', n, `
+      <div class="s-heading">${esc(d.heading||'')}${d.heading_highlight ? ` <span class="hl">${esc(d.heading_highlight)}</span>` : ''}</div>
+      <div class="s-grid6">${items}</div>
+    `);
+  },
+  SECTION(d, n){
+    return article('SECTION', n, `
+      <div class="s-heading"><span class="hln">${esc(d.number||'01')} </span>${esc(d.title||'')}${d.title_2 ? `<br><span class="hl2">${esc(d.title_2)}</span>` : ''}</div>
+      ${d.description ? `<div class="s-person-code">${esc(d.description)}</div>` : ''}
+    `);
+  },
+  CODE_QUESTION(d, n){
+    return article('CODE_QUESTION', n, `
+      <div class="s-heading">${esc(d.heading||'')}${d.heading_highlight ? ` <span class="hl">${esc(d.heading_highlight)}</span>` : ''}</div>
+      ${d.body ? `<div class="s-code"><pre>${esc(d.body)}</pre></div>` : ''}
+    `);
+  },
+  TWO_COL(d, n){
+    const listItems = (d.right_items||[]).map(i=>`<li><span class="hl">${esc(i.split(' ').slice(0,2).join(' '))}</span> ${esc(i.split(' ').slice(2).join(' '))}</li>`).join('');
+    return article('TWO_COL', n, `
+      <div class="s-heading">${esc(d.heading||'')}${d.heading_highlight ? ` <span class="hl">${esc(d.heading_highlight)}</span>` : ''}</div>
+      <div class="s-2col">
+        <div class="s-2col-card"><div class="s-prose">${esc(d.left_content||'')}</div></div>
+        <div class="s-2col-card"><ul>${listItems}</ul></div>
+      </div>
+    `);
+  },
+  STAT_CARDS(d, n){
+    const cards = (d.stats||[]).map((s,i)=>{
+      const c = col(s.color||ACCENTS[i%ACCENTS.length]);
+      return `<div class="s-stat" style="border-color:${c}">
+        <div class="s-stat-val" style="color:${c}">${esc(s.value||'')}</div>
+        <div class="s-stat-lbl">${esc(s.label||'')}</div>
+      </div>`;
+    }).join('');
+    return article('STAT_CARDS', n, `
+      <div class="s-heading">${esc(d.heading||'')}${d.heading_highlight ? ` <span class="hl">${esc(d.heading_highlight)}</span>` : ''}</div>
+      <div class="s-stats">${cards}</div>
+    `);
+  },
+  IMAGE_TEXT(d, n){
+    return article('IMAGE_TEXT', n, `
+      <div class="s-heading">${esc(d.heading||'')}${d.heading_highlight ? ` <span class="hl">${esc(d.heading_highlight)}</span>` : ''}</div>
+      ${d.body ? `<div class="s-prose">${esc(d.body)}</div>` : ''}
+      ${d.link ? `<div style="font-family:var(--font-mono);font-size:.78rem;color:var(--cyan)">${esc(d.link)}</div>` : ''}
+      <div class="s-img-placeholder">🖼</div>
+    `);
+  },
+  QUOTE(d, n){
+    return article('QUOTE', n, `
+      <div class="s-quote-wrap">
+        <div class="s-quote-mark">"</div>
+        <div class="s-quote-text">${esc(d.quote||'')}</div>
+        ${d.author ? `<div class="s-quote-author">— ${esc(d.author)}</div>` : ''}
+      </div>
+    `);
+  },
+  NEXT_LESSON(d, n){
+    return article('NEXT_LESSON', n, `
+      <div class="s-next-lesson">
+        ${d.label ? `<div class="s-next-label">${esc(d.label)}</div>` : ''}
+        <div class="s-next-title">${esc(d.heading||'')}${d.heading_highlight ? `<br><span class="hl">${esc(d.heading_highlight)}</span>` : ''}</div>
+        ${d.body ? `<div class="s-next-body">${esc(d.body)}</div>` : ''}
+      </div>
+    `);
+  },
+  TEAM_3(d, n){
+    const cards = (d.members||[]).map((m,i)=>{
+      const c = col(ACCENTS[i%ACCENTS.length]);
+      return `<div class="s-team-card">
+        <div class="s-team-avatar">👤</div>
+        <div class="s-team-name" style="color:${c}">${esc(m.name||'')}</div>
+        <div class="s-team-bio">${esc(m.bio||'')}</div>
+      </div>`;
+    }).join('');
+    return article('TEAM_3', n, `
+      <div class="s-heading">${esc(d.heading||'')}${d.heading_highlight ? ` <span class="hl">${esc(d.heading_highlight)}</span>` : ''}</div>
+      <div class="s-team">${cards}</div>
+    `);
+  },
+  THANK_YOU(d, n){
+    return article('THANK_YOU', n, `
+      <div class="s-thankyou">
+        <div class="s-ty-big">THANK<br><span>YOU!</span></div>
+        ${d.question ? `<div class="s-ty-question">${esc(d.question)}</div>` : ''}
+        ${d.org     ? `<div class="s-ty-org">${esc(d.org)}</div>` : ''}
+        ${d.website ? `<div class="s-ty-url">${esc(d.website)}</div>` : ''}
+      </div>
+    `);
+  },
+  CONCEPT(d, n){
+    const pts = (d.points||[]).map((p,i)=>`
+      <div class="s-concept ${i>0?'alt':''}">
+        <div class="s-concept-term">${esc(p.term||'')}</div>
+        <div class="s-concept-desc">${esc(p.desc||'')}</div>
+      </div>`).join('');
+    return article('CONCEPT', n, `
+      <div class="s-heading">${esc(d.heading||'')}</div>
+      ${d.analogy ? `<div class="s-callout">
+        <div class="s-callout-lbl">${esc(d.analogy.label||'💡')}</div>
+        <div class="s-callout-body">${esc(d.analogy.body||'')}</div>
+      </div>` : ''}
+      <div class="s-concepts">${pts}</div>
+    `);
+  },
+  DEMO(d, n){
+    const lines = (d.code||[]).map(l =>
+      `${l.line}${l.comment ? `  <span class="cm">${esc(l.comment)}</span>` : ''}`
+    ).join('\n');
+    return article('DEMO', n, `
+      <div class="s-heading">${esc(d.heading||'')}</div>
+      <div class="s-code"><pre>${lines}</pre></div>
+      ${d.output ? `<div class="s-output">${esc(d.output)}</div>` : ''}
+    `);
+  },
+  ACTIVITY(d, n){
+    const modeColor = {code:'var(--cyan)',unplugged:'var(--pink)',discussion:'var(--amber)'};
+    const mc = modeColor[d.mode]||'var(--cyan)';
+    const steps = (d.steps||[]).map((s,i)=>`
+      <div class="s-step">
+        <div class="s-step-n" style="background:${mc}">${i+1}</div>
+        <div class="s-step-txt">${esc(s)}</div>
+      </div>`).join('');
+    return article('ACTIVITY', n, `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="s-heading" style="flex:1">${esc(d.heading||'')}</div>
+        ${d.duration ? `<span class="s-mode-badge" style="background:${mc}">⏱ ${esc(String(d.duration))} phút</span>` : ''}
+      </div>
+      ${d.target ? `<div class="s-target"><span>✅</span><span>${esc(d.target)}</span></div>` : ''}
+      <div class="s-steps">${steps}</div>
+    `);
+  },
+  CHECKPOINT(d, n){
+    const qs = (d.questions||[]).map(q=>`<div class="s-question">${esc(q)}</div>`).join('');
+    return article('CHECKPOINT', n, `
+      <div class="s-heading" style="color:var(--cyan)">🔍 Checkpoint</div>
+      <div class="s-questions">${qs}</div>
+    `);
+  },
+  SUMMARY(d, n){
+    const ca = ['pink','purple','cyan','sage'];
+    const checks = (d.items||[]).slice(0,4).map((item,i)=>`
+      <div class="s-check">
+        <span class="s-check-icon" style="color:${col(ca[i%ca.length])}">✓</span>
+        <span>${esc(item)}</span>
+      </div>`).join('');
+    return article('SUMMARY', n, `
+      <div class="s-heading">${esc(d.heading||'')}</div>
+      <div class="s-checks">${checks}</div>
+      ${d.next ? `<div class="s-next"><span>🎯</span><span>${esc(d.next)}</span></div>` : ''}
+    `);
+  },
+  PREVIEW(d, n){
+    return article('PREVIEW', n, `
+      <div class="s-next-lesson">
+        ${d.teaser ? `<div class="s-next-label">${esc(d.teaser)}</div>` : ''}
+        <div class="s-next-title" style="font-size:1.3rem">${esc(d.question||'')}</div>
+        ${d.hint ? `<div class="s-next-body">${esc(d.hint)}</div>` : ''}
+      </div>
+    `);
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// CANVAS RENDERERS (for thumbnail inside .slide-canvas 960×540)
+// Returns innerHTML string.
+// ═══════════════════════════════════════════════════════════════
+function dots(){ return `<div class="c-dots"><div class="c-dot r"></div><div class="c-dot y"></div><div class="c-dot g"></div></div>`; }
+function win(x,y,w,h,bg=C.surface2,extra=''){
+  return `<div class="c-win" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${bg}">${dots()}${extra}</div>`;
+}
+function glow(x,y,sz,color,op=8){
+  return `<div class="c-glow" style="left:${x}px;top:${y}px;width:${sz}px;height:${sz}px;background:radial-gradient(circle,${color}${Math.round(op*2.55).toString(16).padStart(2,'0')} 0%,transparent 70%)"></div>`;
+}
+
+const CANVAS = {
+  HERO(d){ const code = d.code||''; return `
+    ${glow(700,-100,600,C.pink)}
+    ${win(30,25,900,330,C.surface2,`
+      <div class="c-h1" style="left:40px;top:55px;right:20px">${esc(d.title||'')}</div>
+    `)}
+    ${code ? win(30,375,900,135,C.surface2,`
+      <div class="c-code" style="left:40px;top:30px;right:20px">${esc(code)}</div>
+    `) : ''}
+  `; },
+
+  TITLE(d){ return `
+    ${glow(700,-80,550,C.pink)}
+    ${win(30,25,900,490,C.surface2,`
+      ${d.label ? `<div class="c-label" style="left:40px;top:55px">${esc(d.label)}</div>` : ''}
+      <div class="c-h1" style="left:40px;top:${d.label?90:65}px;right:30px">${esc(d.title||'')}</div>
+      ${d.subtitle ? `<div class="c-sub" style="left:42px;bottom:40px;right:20px">${esc(d.subtitle)}</div>` : ''}
+    `)}
+  `; },
+
+  PERSON_INTRO(d){ return `
+    ${win(30,20,490,500,C.surface2,`
+      <div class="c-h2" style="left:35px;top:50px;right:10px;color:${C.purple}">
+        ${esc(d.heading||'HELLO!')} <span style="color:${C.white}">${esc(d.heading_highlight||"I'm…")}</span>
+      </div>
+      <div class="c-code" style="left:35px;top:130px;right:10px;font-size:13px">${esc(d.body_code||'')}</div>
+    `)}
+    ${win(540,20,390,500,C.dark,`
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:60px;opacity:.3">👤</div>
+    `)}
+  `; },
+
+  GRID_6(d){
+    const ac=['pink','purple','sage','pink','purple','sage'];
+    const pos=[[30,80],[370,80],[710,80],[30,300],[370,300],[710,300]];
+    const cards=(d.items||[]).slice(0,6).map((item,i)=>{
+      const [x,y]=pos[i]; const c=col(ac[i]);
+      return `<div class="c-gcrd" style="left:${x}px;top:${y}px;width:300px;height:190px">
+        ${dots()}
+        <div class="c-gcrd-num" style="right:14px;top:40px;font-size:22px;color:${c}">${String(i+1).padStart(2,'0')}</div>
+        <div class="c-gcrd-txt" style="left:14px;top:80px;right:14px">${esc(item)}</div>
+      </div>`;
+    }).join('');
+    return `
+      <div style="position:absolute;left:30px;top:10px;font-family:var(--font-display);font-size:26px;font-weight:800;color:${C.white}">
+        ${esc(d.heading||'')} <span style="color:${C.purple}">${esc(d.heading_highlight||'')}</span>
+      </div>
+      ${cards}
+    `;
+  },
+
+  SECTION(d){ return `
+    ${win(30,20,900,500,C.surface2,`
+      <div class="c-num" style="left:35px;top:50px;font-size:130px;opacity:.9">${esc(d.number||'01')}</div>
+      <div class="c-h1 sm" style="left:210px;top:90px;right:25px">${esc(d.title||'')}</div>
+      ${d.title_2 ? `<div class="c-h1 sm" style="left:210px;top:175px;right:25px;color:${C.sage}">${esc(d.title_2)}</div>` : ''}
+      ${d.description ? `<div class="c-code" style="left:35px;top:330px;right:25px;font-size:13px">${esc(d.description)}</div>` : ''}
+    `)}
+  `; },
+
+  CODE_QUESTION(d){ return `
+    <div style="position:absolute;left:30px;top:12px;font-family:var(--font-display);font-size:22px;font-weight:800;color:${C.white}">
+      ${esc(d.heading||'')} <span style="color:${C.purple}">${esc(d.heading_highlight||'')}</span>
+    </div>
+    ${win(30,55,900,460,C.surface2,`
+      <div class="c-code" style="left:35px;top:35px;right:25px;font-size:14px">${esc(d.body||'')}</div>
+    `)}
+  `; },
+
+  TWO_COL(d){
+    const list=(d.right_items||[]).map(i=>`• ${i}`).join('\n');
+    return `
+    <div style="position:absolute;left:30px;top:12px;font-family:var(--font-display);font-size:22px;font-weight:800;color:${C.white}">
+      ${esc(d.heading||'')} <span style="color:${C.purple}">${esc(d.heading_highlight||'')}</span>
+    </div>
+    ${win(30,55,450,460,C.surface2,`<div class="c-code" style="left:20px;top:35px;right:15px;font-size:13px;color:${C.white}">${esc(d.left_content||'')}</div>`)}
+    ${win(500,55,430,460,C.surface2,`<div class="c-code" style="left:20px;top:35px;right:15px;font-size:13px;color:${C.white};white-space:pre-wrap">${esc(list)}</div>`)}
+  `; },
+
+  STAT_CARDS(d){
+    const xs=[30,340,650]; const pc_=[PC.pink,PC.purple,PC.sage];
+    const cards=(d.stats||[]).map((s,i)=>{
+      const c=col(s.color||ACCENTS[i%ACCENTS.length]);
+      return `<div class="c-stat" style="left:${xs[i]||30}px;top:85px;width:270px;height:430px">
+        <div class="c-stat-bar" style="background:${c}"></div>
+        <div class="c-stat-val" style="font-size:72px;color:${c};margin-top:50px;width:100%;text-align:center">${esc(s.value||'')}</div>
+        <div class="c-stat-lbl" style="margin-top:12px">${esc(s.label||'')}</div>
+      </div>`;
+    }).join('');
+    return `
+    <div style="position:absolute;left:0;right:0;top:12px;text-align:center;font-family:var(--font-display);font-size:24px;font-weight:800;color:${C.white}">
+      ${esc(d.heading||'')} <span style="color:${C.purple}">${esc(d.heading_highlight||'')}</span>
+    </div>
+    ${cards}`;
+  },
+
+  IMAGE_TEXT(d){ return `
+    ${win(30,20,440,500,C.surface2,`
+      <div class="c-h2" style="left:30px;top:50px;right:10px">${esc(d.heading||'')} <span style="color:${C.purple}">${esc(d.heading_highlight||'')}</span></div>
+      <div class="c-code" style="left:30px;top:155px;right:10px;font-size:13px;color:${C.white}">${esc(d.body||'')}</div>
+      ${d.link ? `<div style="position:absolute;bottom:20px;left:30px;font-size:12px;color:${C.cyan};font-family:var(--font-mono)">${esc(d.link)}</div>` : ''}
+    `)}
+    ${win(495,20,435,500,C.dark,`<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:64px;opacity:.25">🖼</div>`)}
+  `; },
+
+  QUOTE(d){ return `
+    ${glow(100,50,600,C.sage,6)}
+    ${win(30,20,900,500,C.surface2,`
+      <div class="c-qmark" style="top:20px;left:50%;transform:translateX(-50%);font-size:100px">"</div>
+      <div style="position:absolute;left:60px;right:60px;top:130px;font-family:var(--font-display);font-size:38px;font-weight:800;color:${C.white};text-align:center;line-height:1.25">${esc(d.quote||'')}</div>
+      ${d.author ? `<div style="position:absolute;bottom:25px;right:35px;font-family:var(--font-mono);font-size:15px;color:${C.green}">— ${esc(d.author)}</div>` : ''}
+    `)}
+  `; },
+
+  NEXT_LESSON(d){ return `
+    ${win(30,20,310,240,C.dark,`<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;opacity:.3">📱</div>`)}
+    ${win(30,275,310,245,C.dark,`<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:44px;opacity:.2">⚙</div>`)}
+    ${win(365,20,565,500,C.surface2,`
+      ${d.label ? `<div class="c-label" style="left:30px;top:50px">${esc(d.label)}</div>` : ''}
+      <div class="c-h2" style="left:30px;top:${d.label?80:55}px;right:15px">${esc(d.heading||'')} <span style="color:${C.purple}">${esc(d.heading_highlight||'')}</span></div>
+      ${d.body ? `<div class="c-code" style="left:30px;top:220px;right:15px;font-size:13px;color:${C.white}">${esc(d.body)}</div>` : ''}
+    `)}
+  `; },
+
+  TEAM_3(d){
+    const xs=[30,335,640]; const cc_=[C.pink,C.purple,C.sage];
+    const cards=(d.members||[]).map((m,i)=>`
+      <div class="c-win" style="left:${xs[i]||30}px;top:80px;width:275px;height:430px;background:${C.surface2}">
+        ${dots()}
+        <div style="position:absolute;left:50%;transform:translateX(-50%);top:55px;width:80px;height:80px;border-radius:50%;background:${C.dark};display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.6">👤</div>
+        <div style="position:absolute;left:14px;right:14px;top:155px;font-weight:700;font-size:16px;color:${cc_[i%3]};text-align:center">${esc(m.name||'')}</div>
+        <div style="position:absolute;left:18px;right:18px;top:185px;font-size:12px;color:${C.white};line-height:1.45;text-align:center">${esc(m.bio||'')}</div>
+      </div>`).join('');
+    return `
+    <div style="position:absolute;left:0;right:0;top:12px;text-align:center;font-family:var(--font-display);font-size:22px;font-weight:800;color:${C.white}">
+      ${esc(d.heading||'')} <span style="color:${C.purple}">${esc(d.heading_highlight||'')}</span>
+    </div>
+    ${cards}`;
+  },
+
+  THANK_YOU(d){ return `
+    ${win(30,20,520,500,C.surface2,`
+      <div class="c-h1" style="left:35px;top:55px;right:10px;line-height:1.05">THANK<br><span style="color:${C.sage}">YOU!</span></div>
+      ${d.question ? `<div style="position:absolute;left:35px;bottom:40px;right:10px;font-size:16px;font-weight:700;color:${C.white}">${esc(d.question)}</div>` : ''}
+    `)}
+    ${win(575,20,355,500,C.surface2,`
+      ${d.org     ? `<div class="c-code" style="left:20px;top:55px;right:15px;font-size:14px;color:${C.white}">${esc(d.org)}</div>` : ''}
+      ${d.website ? `<div class="c-code" style="left:20px;top:${d.org?115:55}px;right:15px;font-size:13px;color:${C.cyan}">${esc(d.website)}</div>` : ''}
+    `)}
+  `; },
+
+  CONCEPT(d){
+    const pts=(d.points||[]).map((p,i)=>{
+      const c=i===0?C.cyan:C.pink; const y=60+i*200;
+      return `<div style="position:absolute;left:485px;top:${y}px;width:445px;background:${C.surface2};border-radius:8px;padding:14px 16px;border-left:3px solid ${c}">
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${c}">${esc(p.term||'')}</div>
+        <div style="font-size:12px;color:${C.white};margin-top:5px;line-height:1.4">${esc(p.desc||'')}</div>
+      </div>`;
+    }).join('');
+    return `
+    <div style="position:absolute;left:30px;top:10px;right:500px;background:${C.surface2};border-radius:8px;padding:16px;top:60px;height:400px;border-left:3px solid ${C.amber}">
+      <div style="font-size:13px;font-weight:700;color:${C.amber};margin-bottom:8px">${esc(d.analogy?.label||'💡')}</div>
+      <div style="font-size:13px;color:${C.white};line-height:1.5">${esc(d.analogy?.body||'')}</div>
+    </div>
+    ${pts}
+    <div style="position:absolute;left:30px;top:12px;font-family:var(--font-display);font-size:18px;font-weight:800;color:${C.white}">${esc(d.heading||'')}</div>
+    `;
+  },
+
+  DEMO(d){
+    const lines=(d.code||[]).map(l=>`${esc(l.line||'')}${l.comment?`  <span style="color:${C.muted};font-style:italic">${esc(l.comment)}</span>`:''}`).join('\n');
+    return `
+    <div style="position:absolute;left:30px;top:10px;right:30px;font-family:var(--font-display);font-size:18px;font-weight:800;color:${C.white}">${esc(d.heading||'')}</div>
+    <div style="position:absolute;left:30px;top:50px;right:30px;bottom:80px;background:${C.dark};border-radius:8px;border-left:3px solid ${C.green};padding:16px 18px;overflow:hidden">
+      <pre style="font-family:var(--font-mono);font-size:13px;color:${C.sage};line-height:1.7;margin:0">${lines}</pre>
+    </div>
+    <div style="position:absolute;left:30px;bottom:14px;right:30px;height:56px;background:#060f16;border:1px solid ${C.green};border-radius:6px;display:flex;align-items:center;padding:0 16px;font-family:var(--font-mono);font-size:13px;color:${C.green}">▶ ${esc(d.output||'')}</div>
+    `;
+  },
+
+  ACTIVITY(d){
+    const modeColor={code:C.cyan,unplugged:C.pink,discussion:C.amber};
+    const c=modeColor[d.mode]||C.cyan;
+    const steps=(d.steps||[]).map((s,i)=>`
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+        <div style="width:22px;height:22px;border-radius:50%;background:${c};color:${C.dark};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
+        <div style="font-size:13px;color:${C.white};line-height:1.45">${esc(s)}</div>
+      </div>`).join('');
+    return `
+    <div style="position:absolute;top:0;left:0;right:0;height:5px;background:${c}"></div>
+    <div style="position:absolute;top:5px;left:30px;right:30px;font-family:var(--font-display);font-size:17px;font-weight:800;color:${C.white}">${esc(d.heading||'')}</div>
+    <div style="position:absolute;top:8px;right:30px;background:${c};color:${C.dark};font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px">⏱ ${esc(String(d.duration||''))} phút</div>
+    <div style="position:absolute;top:45px;left:30px;right:30px;background:${C.surface2};border-left:3px solid ${C.green};border-radius:5px;padding:8px 12px;font-size:13px;color:${C.green}">✅ ${esc(d.target||'')}</div>
+    <div style="position:absolute;top:105px;left:30px;right:30px;bottom:15px;overflow:hidden">${steps}</div>
+    `;
+  },
+
+  CHECKPOINT(d){
+    const qs=(d.questions||[]).map((q,i)=>`
+      <div style="background:${C.surface};border-left:3px solid ${C.cyan};border-radius:5px;padding:10px 14px;font-size:14px;color:${C.white};margin-bottom:8px;display:flex;gap:10px">
+        <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:${C.cyan};background:rgba(0,151,167,.15);padding:1px 5px;border-radius:3px;flex-shrink:0">${i+1}</span>
+        ${esc(q)}
+      </div>`).join('');
+    return `
+    <div style="position:absolute;inset:0;background:${C.dark}"></div>
+    <div style="position:absolute;right:30px;top:10px;font-size:240px;color:${C.cyan};opacity:.07;font-weight:900;line-height:1;font-family:var(--font-display)">?</div>
+    <div style="position:absolute;top:12px;left:30px;background:${C.cyan};color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:10px">CHECKPOINT</div>
+    <div style="position:absolute;top:50px;left:30px;right:30px;bottom:14px;overflow:hidden">${qs}</div>
+    `;
+  },
+
+  SUMMARY(d){
+    const ca=['pink','purple','cyan','sage'];
+    const pos=[[30,85],[500,85],[30,300],[500,300]];
+    const items=(d.items||[]).slice(0,4).map((item,i)=>{
+      const [x,y]=pos[i]; const c=col(ca[i%ca.length]);
+      return `<div style="position:absolute;left:${x}px;top:${y}px;width:440px;height:185px;background:${C.surface2};border-radius:8px;border-left:3px solid ${c};padding:14px 16px;overflow:hidden">
+        <span style="color:${c};font-weight:700;margin-right:6px">✓</span>
+        <span style="font-size:14px;color:${C.white};line-height:1.4">${esc(item)}</span>
+      </div>`;
+    }).join('');
+    return `
+    <div style="position:absolute;left:30px;top:10px;font-family:var(--font-display);font-size:18px;font-weight:800;color:${C.white}">${esc(d.heading||'')}</div>
+    ${items}
+    ${d.next ? `<div style="position:absolute;bottom:12px;left:30px;right:30px;background:${C.surface2};border-radius:5px;padding:8px 14px;font-size:12px;color:${C.muted}">🎯 ${esc(d.next)}</div>` : ''}
+    `;
+  },
+
+  PREVIEW(d){ return `
+    ${glow(700,-80,550,C.green,7)}
+    ${win(30,20,900,490,C.surface2,`
+      ${d.teaser ? `<div class="c-label" style="left:35px;top:50px">${esc(d.teaser)}</div>` : ''}
+      <div class="c-h1" style="left:35px;top:${d.teaser?85:65}px;right:30px">${esc(d.question||'')}</div>
+      ${d.hint ? `<div class="c-code" style="left:35px;bottom:35px;right:30px;font-size:14px;color:${C.cyan}">${esc(d.hint)}</div>` : ''}
+    `)}
+  `; },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// PPTX RENDERERS (unchanged from v2, abbreviated)
+// ═══════════════════════════════════════════════════════════════
+const W=13.333, H=7.5;
+function mkShadow(){ return {type:'outer',color:'000000',opacity:.4,blur:10,offset:4,angle:135}; }
+function addDotsPptx(s,x=.25,y=.20){
+  [['FF5F57',x],['FFBD2E',x+.22],['28C840',x+.44]].forEach(([c,px])=>{
+    s.addShape('ellipse',{x:px,y,w:.14,h:.14,fill:{color:c},line:{type:'none'}});
+  });
+}
+function addWin(s,x,y,w,h,opts={}){
+  s.addShape('roundRect',{x,y,w,h,fill:{color:opts.fill||PC.surface2},line:{color:PC.surface3,width:1},shadow:mkShadow(),rectRadius:.12});
+  addDotsPptx(s,x+.18,y+.17);
+}
+
+const PPTX = {
+  HERO(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,12.3,4.8); s.addText(d.title||'',{x:.8,y:.9,w:11.7,h:3.2,fontSize:52,bold:true,color:PC.white,fontFace:'Arial Black',margin:0,valign:'middle',wrap:true});
+    if(d.code){ addWin(s,.5,5.3,12.3,1.8,{fill:PC.surface2}); s.addText(d.code,{x:.8,y:5.6,w:12,h:1.3,fontSize:15,color:PC.sage,fontFace:'Courier New',margin:0,wrap:true}); }
+    return s;
+  },
+  TITLE(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,12.3,6.7);
+    if(d.label) s.addText(d.label,{x:.8,y:1.0,w:11.7,h:.4,fontSize:13,color:PC.muted,fontFace:'Arial',margin:0});
+    s.addText(d.title||'',{x:.8,y:1.5,w:11.7,h:3.5,fontSize:48,bold:true,color:PC.white,fontFace:'Arial Black',margin:0,valign:'top',wrap:true});
+    if(d.subtitle) s.addText(d.subtitle,{x:.8,y:5.5,w:11.7,h:.9,fontSize:19,italic:true,color:PC.pink,fontFace:'Arial',margin:0});
+    return s;
+  },
+  SECTION(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,12.3,6.7);
+    s.addText(d.number||'01',{x:.7,y:.9,w:3,h:3.2,fontSize:130,bold:true,color:PC.purple,fontFace:'Arial Black',margin:0,valign:'middle'});
+    s.addText(d.title||'',{x:3.9,y:1.5,w:8.8,h:1.5,fontSize:48,bold:true,color:PC.white,fontFace:'Arial',margin:0,wrap:true});
+    if(d.title_2) s.addText(d.title_2,{x:3.9,y:3.1,w:8.8,h:1.2,fontSize:42,bold:true,color:PC.sage,fontFace:'Arial',margin:0,wrap:true});
+    if(d.description) s.addText(d.description,{x:.8,y:5.2,w:11.7,h:1.5,fontSize:15,color:PC.sage,fontFace:'Courier New',margin:0,wrap:true});
+    return s;
+  },
+  GRID_6(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    s.addText((d.heading||'')+' '+(d.heading_highlight||''),{x:.5,y:.15,w:12.3,h:.75,fontSize:28,bold:true,color:PC.white,fontFace:'Arial',margin:0});
+    const pos=[[.5,1.1],[4.78,1.1],[9.06,1.1],[.5,4.0],[4.78,4.0],[9.06,4.0]];
+    const cs=[PC.pink,PC.purple,PC.sage,PC.pink,PC.purple,PC.sage];
+    (d.items||[]).slice(0,6).forEach((item,i)=>{
+      const [x,y]=pos[i];
+      addWin(s,x,y,3.8,2.75);
+      s.addText(String(i+1).padStart(2,'0'),{x,y:y+.4,w:3.8,h:.6,fontSize:18,bold:true,color:cs[i],fontFace:'Arial Black',align:'right',margin:0});
+      s.addText(item,{x:x+.18,y:y+1.1,w:3.4,h:1.4,fontSize:13,color:PC.white,fontFace:'Arial',margin:0,wrap:true});
+    });
+    return s;
+  },
+  STAT_CARDS(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    s.addText((d.heading||'')+' '+(d.heading_highlight||''),{x:.5,y:.1,w:12.3,h:.7,fontSize:26,bold:true,color:PC.white,fontFace:'Arial',margin:0,align:'center'});
+    const xs=[.5,4.78,9.06];
+    (d.stats||[]).forEach((st,i)=>{
+      const c=pcol(st.color||ACCENTS[i%ACCENTS.length]); const x=xs[i]||.5;
+      addWin(s,x,1.0,3.8,6.1);
+      s.addShape('rect',{x,y:1.0,w:3.8,h:.06,fill:{color:c},line:{type:'none'}});
+      s.addText(st.value||'',{x,y:1.7,w:3.8,h:2.4,fontSize:68,bold:true,color:c,fontFace:'Arial Black',align:'center',margin:0});
+      s.addText(st.label||'',{x:x+.15,y:4.3,w:3.5,h:2.4,fontSize:13,color:PC.muted,fontFace:'Arial',align:'center',margin:0,wrap:true});
+    });
+    return s;
+  },
+  QUOTE(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,12.3,6.7);
+    s.addText('"',{x:5.5,y:.5,w:2.3,h:1,fontSize:56,color:PC.white,fontFace:'Arial',align:'center',margin:0,transparency:88});
+    s.addText(d.quote||'',{x:1.2,y:1.7,w:11,h:3.8,fontSize:38,bold:true,color:PC.white,fontFace:'Arial',align:'center',margin:0,wrap:true,valign:'middle'});
+    if(d.author) s.addText('— '+d.author,{x:9,y:6.3,w:3.7,h:.6,fontSize:15,color:PC.green,fontFace:'Courier New',align:'right',margin:0});
+    return s;
+  },
+  CONCEPT(p,d){ const s=p.addSlide(); s.background={color:PC.surface};
+    s.addShape('rect',{x:0,y:0,w:W,h:.95,fill:{color:PC.surface2},line:{type:'none'}});
+    addDotsPptx(s); s.addText(d.heading||'',{x:.5,y:.12,w:12.3,h:.7,fontSize:17,bold:true,color:PC.white,fontFace:'Arial',margin:0,valign:'middle'});
+    s.addShape('roundRect',{x:.5,y:1.1,w:5.8,h:6.0,fill:{color:PC.surface2},line:{type:'none'},rectRadius:.08});
+    s.addShape('rect',{x:.5,y:1.1,w:.08,h:6.0,fill:{color:PC.amber},line:{type:'none'}});
+    s.addText(d.analogy?.label||'💡',{x:.7,y:1.3,w:5.4,h:.5,fontSize:12,bold:true,color:PC.amber,fontFace:'Arial',margin:0});
+    s.addText(d.analogy?.body||'',{x:.7,y:1.9,w:5.4,h:4.8,fontSize:13,color:PC.white,fontFace:'Arial',margin:0,wrap:true,valign:'top'});
+    (d.points||[]).forEach((pt,i)=>{ const c=i===0?PC.cyan:PC.pink; const y=1.1+i*3.1;
+      s.addShape('roundRect',{x:6.6,y,w:6.3,h:2.9,fill:{color:PC.surface2},line:{type:'none'},rectRadius:.08});
+      s.addShape('rect',{x:6.6,y,w:.08,h:2.9,fill:{color:c},line:{type:'none'}});
+      s.addText(pt.term||'',{x:6.8,y:y+.2,w:5.9,h:.6,fontSize:13,bold:true,color:c,fontFace:'Courier New',margin:0});
+      s.addText(pt.desc||'',{x:6.8,y:y+.9,w:5.9,h:1.8,fontSize:12,color:PC.white,fontFace:'Arial',margin:0,wrap:true,valign:'top'});
+    });
+    return s;
+  },
+  DEMO(p,d){ const s=p.addSlide(); s.background={color:PC.surface};
+    s.addShape('rect',{x:0,y:0,w:W,h:.95,fill:{color:PC.surface2},line:{type:'none'}}); addDotsPptx(s);
+    s.addText(d.heading||'',{x:.5,y:.12,w:12.3,h:.7,fontSize:17,bold:true,color:PC.white,fontFace:'Arial',margin:0,valign:'middle'});
+    s.addShape('rect',{x:.5,y:1.1,w:12.3,h:4.2,fill:{color:PC.dark},line:{type:'none'}});
+    s.addShape('rect',{x:.5,y:1.1,w:.08,h:4.2,fill:{color:PC.green},line:{type:'none'}});
+    (d.code||[]).forEach((l,i)=>{ const y=1.3+i*.52;
+      s.addText(l.line||'',{x:.7,y,w:8,h:.45,fontSize:13,color:PC.white,fontFace:'Courier New',margin:0});
+      if(l.comment) s.addText(l.comment,{x:8.8,y,w:3.7,h:.45,fontSize:11,italic:true,color:PC.muted,fontFace:'Arial',margin:0});
+    });
+    s.addShape('rect',{x:.5,y:5.5,w:12.3,h:.85,fill:{color:'060F16'},line:{color:PC.green,width:1}});
+    s.addText('▶ '+(d.output||''),{x:.7,y:5.55,w:12,h:.75,fontSize:13,color:PC.green,fontFace:'Courier New',margin:0,valign:'middle'});
+    return s;
+  },
+  ACTIVITY(p,d){ const s=p.addSlide(); s.background={color:PC.surface};
+    const mc={code:PC.cyan,unplugged:PC.pink,discussion:PC.amber}; const c=mc[d.mode]||PC.cyan;
+    s.addShape('rect',{x:0,y:0,w:W,h:.08,fill:{color:c},line:{type:'none'}});
+    s.addShape('rect',{x:0,y:.08,w:W,h:.9,fill:{color:PC.surface2},line:{type:'none'}}); addDotsPptx(s);
+    s.addText(d.heading||'',{x:.5,y:.15,w:10.5,h:.7,fontSize:17,bold:true,color:PC.white,fontFace:'Arial',margin:0,valign:'middle'});
+    s.addShape('roundRect',{x:11.2,y:.17,w:1.8,h:.55,fill:{color:c},line:{type:'none'},rectRadius:.08});
+    s.addText('⏱ '+(d.duration||'')+'ph',{x:11.2,y:.17,w:1.8,h:.55,fontSize:11,bold:true,color:'0C1520',align:'center',valign:'middle',fontFace:'Arial',margin:0});
+    s.addShape('roundRect',{x:.5,y:1.1,w:12.3,h:.75,fill:{color:PC.surface2},line:{type:'none'},rectRadius:.06});
+    s.addShape('rect',{x:.5,y:1.1,w:.08,h:.75,fill:{color:PC.green},line:{type:'none'}});
+    s.addText('✅  '+(d.target||''),{x:.7,y:1.2,w:11.8,h:.55,fontSize:13,color:PC.green,fontFace:'Arial',margin:0});
+    (d.steps||[]).forEach((step,i)=>{ const y=2.1+i*.95;
+      s.addShape('ellipse',{x:.5,y:y+.08,w:.48,h:.48,fill:{color:c},line:{type:'none'}});
+      s.addText(String(i+1),{x:.5,y:y+.08,w:.48,h:.48,fontSize:13,bold:true,color:'0C1520',align:'center',valign:'middle',fontFace:'Arial',margin:0});
+      s.addText(step,{x:1.1,y:y+.1,w:11.5,h:.45,fontSize:13,color:PC.white,fontFace:'Arial',margin:0});
+    });
+    return s;
+  },
+  CHECKPOINT(p,d){ const s=p.addSlide(); s.background={color:PC.dark}; addDotsPptx(s);
+    s.addText('?',{x:7.5,y:.3,w:5.5,h:6.8,fontSize:280,bold:true,color:PC.cyan,transparency:90,fontFace:'Arial Black',align:'center',margin:0});
+    s.addShape('roundRect',{x:.5,y:.4,w:2.5,h:.5,fill:{color:PC.cyan},line:{type:'none'},rectRadius:.08});
+    s.addText('CHECKPOINT',{x:.5,y:.4,w:2.5,h:.5,fontSize:13,bold:true,color:PC.white,align:'center',valign:'middle',fontFace:'Arial',margin:0});
+    (d.questions||[]).forEach((q,i)=>{ const y=1.2+i*1.9;
+      s.addShape('roundRect',{x:.5,y,w:7.8,h:1.5,fill:{color:PC.surface},line:{type:'none'},rectRadius:.06});
+      s.addShape('rect',{x:.5,y,w:.08,h:1.5,fill:{color:PC.cyan},line:{type:'none'}});
+      s.addText(q,{x:.7,y:y+.15,w:7.4,h:1.2,fontSize:16,color:PC.white,fontFace:'Arial',margin:0,wrap:true});
+    });
+    return s;
+  },
+  SUMMARY(p,d){ const s=p.addSlide(); s.background={color:PC.surface};
+    s.addShape('rect',{x:0,y:0,w:W,h:.95,fill:{color:PC.surface2},line:{type:'none'}}); addDotsPptx(s);
+    s.addText(d.heading||'',{x:.5,y:.12,w:12.3,h:.7,fontSize:17,bold:true,color:PC.white,fontFace:'Arial',margin:0,valign:'middle'});
+    const ca2=[PC.pink,PC.purple,PC.cyan,PC.sage]; const ps=[[.5,1.1],[6.9,1.1],[.5,3.9],[6.9,3.9]];
+    (d.items||[]).slice(0,4).forEach((item,i)=>{ const [x,y]=ps[i];
+      s.addShape('roundRect',{x,y,w:5.9,h:2.5,fill:{color:PC.surface2},line:{type:'none'},rectRadius:.06});
+      s.addShape('rect',{x,y,w:.08,h:2.5,fill:{color:ca2[i]},line:{type:'none'}});
+      s.addText('✓',{x:x+.15,y:y+.15,w:.5,h:.6,fontSize:19,bold:true,color:ca2[i],fontFace:'Arial',margin:0});
+      s.addText(item,{x:x+.7,y:y+.15,w:4.9,h:2.2,fontSize:14,color:PC.white,fontFace:'Arial',margin:0,wrap:true,valign:'middle'});
+    });
+    if(d.next){ s.addShape('rect',{x:.5,y:6.65,w:12.3,h:.6,fill:{color:PC.surface2},line:{type:'none'}});
+      s.addText('🎯  '+d.next,{x:.7,y:6.7,w:12,h:.5,fontSize:12,color:PC.muted,fontFace:'Arial',margin:0}); }
+    return s;
+  },
+  PREVIEW(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,12.3,6.7);
+    if(d.teaser) s.addText(d.teaser,{x:.8,y:1.1,w:11.7,h:.5,fontSize:14,color:PC.muted,fontFace:'Arial',margin:0});
+    s.addText(d.question||'',{x:.8,y:1.7,w:11.7,h:3.0,fontSize:44,bold:true,color:PC.white,fontFace:'Arial Black',margin:0,valign:'top',wrap:true});
+    if(d.hint) s.addText(d.hint,{x:.8,y:5.1,w:11.7,h:1.4,fontSize:16,italic:true,color:PC.cyan,fontFace:'Arial',margin:0,wrap:true});
+    return s;
+  },
+  // Aliases
+  CODE_QUESTION(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    s.addText((d.heading||'')+' '+(d.heading_highlight||''),{x:.5,y:.15,w:12,h:.75,fontSize:24,bold:true,color:PC.white,fontFace:'Arial',margin:0});
+    addWin(s,.5,1.0,12.3,6.1);
+    if(d.body) s.addText(d.body,{x:.8,y:1.55,w:11.7,h:5.0,fontSize:16,color:PC.sage,fontFace:'Courier New',margin:0,wrap:true,valign:'top'});
+    return s;
+  },
+  TWO_COL(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    s.addText((d.heading||'')+' '+(d.heading_highlight||''),{x:.5,y:.15,w:12,h:.75,fontSize:24,bold:true,color:PC.white,fontFace:'Arial',margin:0});
+    addWin(s,.5,1.0,6.1,6.1);
+    s.addText(d.left_content||'',{x:.7,y:1.55,w:5.7,h:5.0,fontSize:13,color:PC.white,fontFace:'Arial',margin:0,wrap:true,valign:'top'});
+    addWin(s,6.9,1.0,6.0,6.1);
+    s.addText((d.right_items||[]).map(i=>'• '+i).join('\n'),{x:7.1,y:1.55,w:5.6,h:5.0,fontSize:13,color:PC.white,fontFace:'Arial',margin:0,wrap:true,valign:'top'});
+    return s;
+  },
+  IMAGE_TEXT(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,6.1,6.7);
+    s.addText((d.heading||'')+' '+(d.heading_highlight||''),{x:.7,y:1.0,w:5.7,h:1.5,fontSize:26,bold:true,color:PC.white,fontFace:'Arial',margin:0,wrap:true});
+    if(d.body) s.addText(d.body,{x:.7,y:2.7,w:5.7,h:3.5,fontSize:13,color:PC.white,fontFace:'Arial',margin:0,wrap:true,valign:'top'});
+    addWin(s,6.9,.3,6.0,6.7,{fill:PC.dark});
+    s.addText('[ image ]',{x:6.9,y:3.2,w:6.0,h:1,fontSize:15,color:PC.muted,fontFace:'Arial',align:'center',margin:0});
+    return s;
+  },
+  NEXT_LESSON(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,4.5,3.0,{fill:PC.dark}); s.addText('📱',{x:1.5,y:1.0,w:2.5,h:1.5,fontSize:40,align:'center',margin:0});
+    addWin(s,.5,3.7,4.5,3.1,{fill:PC.dark});
+    addWin(s,5.3,.3,7.5,6.5);
+    if(d.label) s.addText(d.label,{x:5.5,y:1.0,w:7.1,h:.5,fontSize:13,color:PC.muted,fontFace:'Arial',margin:0});
+    s.addText((d.heading||'')+(d.heading_highlight?' '+d.heading_highlight:''),{x:5.5,y:1.6,w:7.1,h:2.5,fontSize:34,bold:true,color:PC.white,fontFace:'Arial',margin:0,wrap:true});
+    if(d.body) s.addText(d.body,{x:5.5,y:4.2,w:7.1,h:2.5,fontSize:13,color:PC.white,fontFace:'Arial',margin:0,wrap:true,valign:'top'});
+    return s;
+  },
+  TEAM_3(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    s.addText((d.heading||'')+' '+(d.heading_highlight||''),{x:.5,y:.15,w:12.3,h:.7,fontSize:26,bold:true,color:PC.white,fontFace:'Arial',margin:0,align:'center'});
+    const xs=[.5,4.78,9.06]; const cs=[PC.pink,PC.purple,PC.sage];
+    (d.members||[]).forEach((m,i)=>{ const x=xs[i];
+      addWin(s,x,1.0,3.8,6.1);
+      s.addShape('ellipse',{x:x+1.25,y:1.55,w:1.3,h:1.3,fill:{color:PC.dark},line:{type:'none'}});
+      s.addText(m.name||'',{x,y:3.1,w:3.8,h:.55,fontSize:15,bold:true,color:cs[i%3],fontFace:'Arial',align:'center',margin:0});
+      s.addText(m.bio||'',{x:x+.15,y:3.75,w:3.5,h:2.9,fontSize:12,color:PC.white,fontFace:'Arial',align:'center',margin:0,wrap:true});
+    });
+    return s;
+  },
+  THANK_YOU(p,d){ const s=p.addSlide(); s.background={color:PC.bg};
+    addWin(s,.5,.3,6.8,6.7); s.addText('THANK\nYOU!',{x:.8,y:1.4,w:6.1,h:3.5,fontSize:60,bold:true,color:PC.white,fontFace:'Arial Black',margin:0,valign:'middle'});
+    if(d.question) s.addText(d.question,{x:.8,y:5.3,w:6.1,h:.95,fontSize:17,bold:true,color:PC.white,fontFace:'Courier New',margin:0});
+    addWin(s,7.6,.3,5.2,6.7);
+    if(d.org) s.addText(d.org,{x:7.8,y:1.7,w:4.8,h:1.5,fontSize:15,color:PC.white,fontFace:'Courier New',margin:0,wrap:true});
+    if(d.website) s.addText(d.website,{x:7.8,y:3.4,w:4.8,h:.7,fontSize:14,color:PC.cyan,fontFace:'Courier New',margin:0});
+    return s;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+let currentSlides = null;
+const ALL_TYPES = new Set([...Object.keys(ARTICLES), ...Object.keys(CANVAS), ...Object.keys(PPTX)]);
+
+function scaleCanvases(){
+  document.querySelectorAll('.thumb-frame').forEach(frame=>{
+    const canvas = frame.querySelector('.slide-canvas');
+    if(!canvas) return;
+    const scale = frame.clientWidth / 960;
+    canvas.style.transform = `scale(${scale})`;
+    frame.style.height = (540 * scale) + 'px';
+  });
+}
+
+function renderAll(slides){
+  const sgrid = document.getElementById('slides-grid');
+  const rgrid  = document.getElementById('review-grid');
+  const empty  = document.getElementById('empty-state');
+
+  if(!slides || slides.length === 0){
+    sgrid.innerHTML = ''; rgrid.innerHTML = '';
+    empty.style.display = 'flex';
+    document.getElementById('slide-count').textContent = '0 slides';
+    document.getElementById('mob-slide-info').textContent = '0 slides';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Build slide thumbnails
+  const thumbHtml = slides.map((slide,i) => {
+    const canvasRenderer = CANVAS[slide.type];
+    const innerCanvas = canvasRenderer ? canvasRenderer(slide.data||{}) : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px">Unknown: ${esc(slide.type)}</div>`;
+    return `<div class="slide-thumb">
+      <div class="thumb-meta">
+        <span>${i+1}</span>
+        <span class="thumb-type">${esc(slide.type)}</span>
+      </div>
+      <div class="thumb-frame">
+        <div class="slide-canvas">${innerCanvas}</div>
+      </div>
+    </div>`;
+  }).join('');
+  sgrid.innerHTML = thumbHtml;
+
+  // Build review articles
+  const reviewHtml = slides.map((slide,i) => {
+    const articleRenderer = ARTICLES[slide.type];
+    return articleRenderer ? articleRenderer(slide.data||{}, i+1) : `<article class="slide-article"><div class="s-body"><p style="color:var(--muted)">Unknown type: ${esc(slide.type)}</p></div></article>`;
+  }).join('');
+  rgrid.innerHTML = reviewHtml;
+
+  const cnt = `${slides.length} slide${slides.length!==1?'s':''}`;
+  document.getElementById('slide-count').textContent = cnt;
+  document.getElementById('mob-slide-info').textContent = cnt;
+
+  // Scale thumbnails after render
+  requestAnimationFrame(()=>{ scaleCanvases(); });
+}
+
+// Rescale on window resize
+window.addEventListener('resize', ()=>{ scaleCanvases(); });
+
+// ═══════════════════════════════════════════════════════════════
+// PARSE
+// ═══════════════════════════════════════════════════════════════
+function parseAndRender(){
+  const raw = document.getElementById('json-input')?.value.trim();
+  if(!raw){ setStatus(false,'Nhập JSON array của slides'); renderAll(null); currentSlides=null; return; }
+  try{
+    const parsed = JSON.parse(raw);
+    if(!Array.isArray(parsed)) throw new Error('JSON phải là array []');
+    if(parsed.length===0) throw new Error('Array trống');
+    parsed.forEach((s,i)=>{
+      if(!s.type) throw new Error(`Slide ${i+1}: thiếu "type"`);
+      if(!ALL_TYPES.has(s.type)) throw new Error(`Slide ${i+1}: "${s.type}" không được hỗ trợ`);
+    });
+    currentSlides = parsed;
+    renderAll(parsed);
+    setStatus(true, `✓ ${parsed.length} slides`);
+  }catch(e){
+    currentSlides=null; renderAll(null);
+    setStatus(false,'✗ '+e.message);
+  }
+}
+
+function setStatus(ok,msg){
+  document.getElementById('status-dot').className = 'status-dot'+(ok?'':' err');
+  const f = document.getElementById('footer-msg');
+  if(f){ f.className = ok?'msg-ok':'msg-err'; f.textContent = msg; }
+  document.getElementById('export-btn').disabled = !ok;
+  const hb = document.getElementById('export-html-btn'); if(hb) hb.disabled = !ok;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODE TOGGLE
+// ═══════════════════════════════════════════════════════════════
+function setMode(mode){
+  document.body.className = 'mode-'+mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+mode)?.classList.add('active');
+  if(mode==='slides') requestAnimationFrame(scaleCanvases);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MOBILE SCROLL PROGRESS
+// ═══════════════════════════════════════════════════════════════
+function updateScrollProgress(){
+  const body = document.body;
+  const scrolled = window.scrollY;
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = total > 0 ? Math.round((scrolled/total)*100) : 0;
+  const bar = document.getElementById('mob-progress');
+  if(bar) bar.style.width = pct+'%';
+  const pctEl = document.getElementById('mob-scroll-pct');
+  if(pctEl) pctEl.textContent = pct+'%';
+}
+window.addEventListener('scroll', updateScrollProgress, {passive:true});
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════
+async function exportPPTX(){
+  if(!currentSlides) return;
+  const btn = document.getElementById('export-btn');
+  btn.disabled=true; btn.textContent='⏳...';
+  try{
+    const pres = new PptxGenJS();
+    pres.layout='LAYOUT_WIDE'; pres.title='Slide Deck';
+    currentSlides.forEach((slide,i)=>{ const r=PPTX[slide.type]; if(r) r(pres,slide.data||{},i+1); });
+    const title = currentSlides.find(s=>['TITLE','HERO','SECTION'].includes(s.type));
+    const fname = ((title?.data?.title||title?.data?.label||'slides')+'').replace(/[^a-zA-Z0-9À-ỹ\s]/g,'').replace(/\s+/g,'_').slice(0,40)||'slides';
+    await pres.writeFile({fileName:`${fname}.pptx`});
+    btn.textContent='✓ Done!';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='⬇ PPTX'; },2500);
+  }catch(e){
+    console.error(e); btn.textContent='✗ Error';
+    setTimeout(()=>{ btn.disabled=false; btn.textContent='⬇ PPTX'; },2500);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT HTML — standalone responsive file
+// ═══════════════════════════════════════════════════════════════
+function exportHTML(){
+  if(!currentSlides) return;
+  const btn = document.getElementById('export-html-btn');
+  btn.disabled = true; btn.textContent = '⏳...';
+
+  try {
+    // ── 1. Build canvas HTML for each slide (desktop view) ──
+    const slidesHtml = currentSlides.map((slide, i) => {
+      const cr = CANVAS[slide.type];
+      const inner = cr ? cr(slide.data||{}) : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#6B8A9E;font-size:14px">Slide ${i+1}: ${esc(slide.type)}</div>`;
+      return `<div class="ss-slide-wrap" id="slide-${i+1}">
+  <div class="ss-canvas">${inner}</div>
+</div>`;
+    }).join('\n');
+
+    // ── 2. Build article HTML for each slide (mobile / review view) ──
+    const reviewHtml = currentSlides.map((slide, i) => {
+      const ar = ARTICLES[slide.type];
+      return ar ? ar(slide.data||{}, i+1) : `<article class="slide-article"><div class="s-body"><p style="color:#6B8A9E">Unknown type: ${esc(slide.type)}</p></div></article>`;
+    }).join('\n');
+
+    // ── 3. Title for <title> tag ──
+    const titleSlide = currentSlides.find(s => ['HERO','TITLE','SECTION'].includes(s.type));
+    const docTitle = titleSlide?.data?.title || titleSlide?.data?.label || 'Slide Deck';
+    const fname = docTitle.replace(/[^a-zA-Z0-9À-ỹ\s]/g,'').replace(/\s+/g,'_').slice(0,40) || 'slides';
+
+    // ── 4. Assemble the standalone HTML ──
+    const out = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(docTitle)}</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root {
+  --bg:#16242F; --surface:#1F3240; --surface2:#243B4D; --surface3:#2A3F52;
+  --pink:#EB8FD8; --purple:#BA94E9; --sage:#B9D4B4; --coral:#F46659;
+  --amber:#FFBC3E; --green:#1CC549; --cyan:#0097A7;
+  --white:#E8EDF2; --muted:#6B8A9E; --dark:#0E1C28;
+  --font-display:'Syne',sans-serif; --font-body:'DM Sans',sans-serif; --font-mono:'JetBrains Mono',monospace;
+  --radius:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;}
+body{background:var(--bg);color:var(--white);font-family:var(--font-body);line-height:1.5;}
+
+/* ── DESKTOP: slide view ── */
+#deck {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 32px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.ss-slide-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+/* 16:9 aspect-ratio frame */
+.ss-frame {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--surface3);
+  box-shadow: 0 6px 32px rgba(0,0,0,.45);
+  position: relative;
+}
+/* canvas is 960x540, scaled to fill frame */
+.ss-canvas {
+  width: 960px;
+  height: 540px;
+  transform-origin: top left;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font-body);
+}
+.ss-slide-num {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+/* ── MOBILE: review / article view ── */
+#review { display: none; }
+
+/* ── SHARED article styles ── */
+.slide-article{background:var(--surface);border-radius:var(--radius);border:1px solid var(--surface3);overflow:hidden;}
+.slide-article .s-num{display:flex;align-items:center;gap:8px;padding:8px 16px 0;font-size:10px;font-weight:700;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.8px;}
+.slide-article .s-type-badge{font-size:9px;padding:1px 6px;border-radius:3px;background:var(--surface2);color:var(--purple);font-weight:700;}
+.slide-article .s-accent{height:3px;flex-shrink:0;}
+.s-body{padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;}
+.s-heading{font-family:var(--font-display);font-size:1.35rem;font-weight:800;color:var(--white);line-height:1.15;letter-spacing:-.3px;}
+.s-heading .hl{color:var(--purple);} .s-heading .hl2{color:var(--sage);} .s-heading .hln{color:var(--pink);font-size:1.6em;opacity:.9;}
+.s-label{font-size:.72rem;color:var(--muted);letter-spacing:.4px;font-weight:500;}
+.s-sub{font-size:.85rem;color:var(--pink);font-style:italic;}
+.s-prose{font-size:.88rem;color:var(--white);line-height:1.65;}
+.s-prose .hl{color:var(--purple);font-weight:600;} .s-prose .hl2{color:var(--sage);font-weight:600;} .s-prose .hl3{color:var(--cyan);font-weight:600;}
+.s-code{background:var(--dark);border-radius:7px;padding:14px 16px;overflow-x:auto;border-left:3px solid var(--green);}
+.s-code pre{font-family:var(--font-mono);font-size:.78rem;color:var(--sage);line-height:1.75;margin:0;white-space:pre;}
+.s-code pre .cm{color:var(--muted);font-style:italic;}
+.s-output{background:#060f16;border:1px solid var(--green);border-radius:6px;padding:9px 14px;font-family:var(--font-mono);font-size:.76rem;color:var(--green);}
+.s-output::before{content:'▶ ';}
+.s-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.s-stat{background:var(--surface2);border-radius:8px;padding:16px 14px;text-align:center;border-top:3px solid var(--pink);}
+.s-stat-val{font-family:var(--font-display);font-size:2.2rem;font-weight:800;line-height:1;}
+.s-stat-lbl{font-size:.72rem;color:var(--muted);margin-top:6px;line-height:1.4;}
+.s-grid6{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:9px;}
+.s-grid6-item{background:var(--surface2);border-radius:7px;padding:12px 14px;border-left:3px solid var(--pink);}
+.s-grid6-num{font-family:var(--font-mono);font-size:.7rem;font-weight:700;margin-bottom:4px;}
+.s-grid6-txt{font-size:.8rem;color:var(--white);line-height:1.4;}
+.s-steps{display:flex;flex-direction:column;gap:8px;}
+.s-step{display:flex;align-items:flex-start;gap:10px;}
+.s-step-n{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--dark);background:var(--cyan);margin-top:1px;}
+.s-step-txt{font-size:.85rem;color:var(--white);line-height:1.5;padding-top:2px;}
+.s-callout{background:var(--surface2);border-left:3px solid var(--amber);border-radius:6px;padding:12px 14px;}
+.s-callout-lbl{font-size:.72rem;font-weight:700;color:var(--amber);margin-bottom:5px;}
+.s-callout-body{font-size:.82rem;color:var(--white);line-height:1.55;}
+.s-concepts{display:flex;flex-direction:column;gap:8px;}
+.s-concept{background:var(--surface2);border-radius:6px;padding:11px 14px;border-left:3px solid var(--cyan);}
+.s-concept.alt{border-color:var(--pink);}
+.s-concept-term{font-family:var(--font-mono);font-size:.78rem;font-weight:700;color:var(--cyan);margin-bottom:3px;}
+.s-concept.alt .s-concept-term{color:var(--pink);}
+.s-concept-desc{font-size:.8rem;color:var(--white);line-height:1.45;}
+.s-target{background:var(--surface2);border-left:3px solid var(--green);border-radius:6px;padding:10px 14px;font-size:.82rem;color:var(--green);display:flex;align-items:flex-start;gap:7px;}
+.s-questions{display:flex;flex-direction:column;gap:8px;counter-reset:q-counter;}
+.s-question{background:var(--dark);border-left:3px solid var(--cyan);border-radius:6px;padding:11px 14px;font-size:.83rem;color:var(--white);line-height:1.5;counter-increment:q-counter;display:flex;gap:10px;align-items:flex-start;}
+.s-question::before{content:counter(q-counter);font-family:var(--font-mono);font-size:.68rem;font-weight:700;color:var(--cyan);background:rgba(0,151,167,.15);border-radius:4px;padding:2px 6px;flex-shrink:0;margin-top:1px;}
+.s-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.s-check{background:var(--surface2);border-radius:6px;padding:10px 12px;font-size:.8rem;color:var(--white);line-height:1.4;display:flex;gap:8px;align-items:flex-start;}
+.s-check-icon{flex-shrink:0;font-weight:700;}
+.s-next{background:var(--surface2);border-radius:6px;padding:10px 14px;font-size:.78rem;color:var(--muted);line-height:1.5;display:flex;gap:8px;align-items:flex-start;}
+.s-quote-wrap{text-align:center;padding:8px 0;}
+.s-quote-mark{font-size:3rem;color:var(--white);opacity:.08;line-height:.5;font-family:serif;}
+.s-quote-text{font-family:var(--font-display);font-size:1.3rem;font-weight:800;color:var(--white);line-height:1.3;margin:8px 0;}
+.s-quote-author{font-family:var(--font-mono);font-size:.75rem;color:var(--green);}
+.s-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.s-2col-card{background:var(--surface2);border-radius:7px;padding:12px 14px;font-size:.82rem;color:var(--white);line-height:1.55;}
+.s-2col-card ul{padding-left:1.1em;display:flex;flex-direction:column;gap:5px;}
+.s-2col-card li{font-size:.8rem;}
+.s-2col-card li .hl{color:var(--cyan);font-weight:600;}
+.s-team{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+.s-team-card{background:var(--surface2);border-radius:8px;padding:16px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;}
+.s-team-avatar{width:56px;height:56px;border-radius:50%;background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:1.5rem;opacity:.7;}
+.s-team-name{font-weight:700;font-size:.88rem;}
+.s-team-bio{font-size:.75rem;color:var(--muted);line-height:1.45;}
+.s-mode-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px;color:var(--dark);}
+.s-next-lesson{background:var(--surface2);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;}
+.s-next-label{font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.s-next-title{font-family:var(--font-display);font-size:1.15rem;font-weight:800;color:var(--white);line-height:1.2;}
+.s-next-title .hl{color:var(--purple);}
+.s-next-body{font-size:.82rem;color:var(--muted);line-height:1.55;}
+.s-thankyou{text-align:center;padding:12px 0;}
+.s-ty-big{font-family:var(--font-display);font-size:3rem;font-weight:800;color:var(--white);line-height:1.1;}
+.s-ty-big span{color:var(--sage);}
+.s-ty-question{font-size:.9rem;font-weight:600;color:var(--white);margin:12px 0 4px;}
+.s-ty-org{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);}
+.s-ty-url{font-family:var(--font-mono);font-size:.78rem;color:var(--cyan);}
+.s-person-code{background:var(--dark);border-radius:7px;padding:12px 16px;font-family:var(--font-mono);font-size:.78rem;color:var(--sage);line-height:1.75;border-left:3px solid var(--surface3);white-space:pre-wrap;}
+.s-img-placeholder{background:var(--dark);border-radius:7px;display:flex;align-items:center;justify-content:center;min-height:80px;font-size:1.6rem;opacity:.25;border:1px dashed var(--surface3);}
+.s-hero-title{font-family:var(--font-display);font-size:1.9rem;font-weight:800;color:var(--white);line-height:1.1;letter-spacing:-.5px;}
+.s-hero-code{background:var(--dark);border-radius:7px;padding:12px 16px;font-family:var(--font-mono);font-size:.8rem;color:var(--sage);line-height:1.75;border-left:3px solid var(--surface3);}
+
+/* canvas internals */
+.c-dots{display:flex;gap:5px;padding:0;position:absolute;top:10px;left:12px;z-index:5;}
+.c-dot{width:8px;height:8px;border-radius:50%;}
+.c-dot.r{background:#FF5F57;} .c-dot.y{background:#FFBD2E;} .c-dot.g{background:#28C840;}
+.c-win{background:var(--surface2);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.55);position:absolute;overflow:hidden;}
+.c-win .c-dots{top:10px;left:12px;}
+.c-label{font-size:13px;color:var(--muted);letter-spacing:.4px;position:absolute;}
+.c-h1{font-family:var(--font-display);font-size:48px;font-weight:800;color:var(--white);line-height:1.1;position:absolute;}
+.c-h1.sm{font-size:38px;}
+.c-h2{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--white);line-height:1.15;position:absolute;}
+.c-sub{font-size:16px;color:var(--pink);font-style:italic;position:absolute;}
+.c-code{font-family:var(--font-mono);font-size:14px;color:var(--sage);line-height:1.7;position:absolute;white-space:pre-wrap;}
+.c-muted{font-size:13px;color:var(--muted);position:absolute;}
+.c-num{font-family:var(--font-display);font-weight:800;color:var(--purple);position:absolute;line-height:1;}
+.c-hl{color:var(--purple);} .c-hl2{color:var(--sage);}
+.c-glow{position:absolute;border-radius:50%;pointer-events:none;}
+.c-stat{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:var(--surface2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden;}
+.c-stat-val{font-family:var(--font-display);font-weight:800;line-height:1;}
+.c-stat-lbl{font-size:13px;color:var(--muted);text-align:center;line-height:1.35;padding:0 8px;}
+.c-stat-bar{width:100%;height:4px;position:absolute;top:0;}
+.c-gcrd{position:absolute;background:var(--surface2);border-radius:8px;overflow:hidden;}
+.c-gcrd-num{font-family:var(--font-mono);font-weight:700;line-height:1;position:absolute;}
+.c-gcrd-txt{font-size:13px;color:var(--white);line-height:1.35;position:absolute;}
+.c-qmark{position:absolute;font-family:serif;line-height:1;opacity:.1;color:var(--white);}
+
+/* ── HEADER bar ── */
+#ss-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface3);
+  padding: 0 40px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.ss-logo { font-family: var(--font-display); font-size: 15px; font-weight: 800; color: var(--pink); letter-spacing: -.3px; }
+.ss-meta { font-size: 12px; color: var(--muted); }
+.ss-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); background: var(--surface2); padding: 2px 10px; border-radius: 20px; }
+
+/* ── PROGRESS bar (mobile) ── */
+#ss-progress-bar {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--surface3);
+  z-index: 200;
+}
+#ss-progress-fill { height: 100%; background: var(--pink); width: 0; transition: width .2s; }
+
+/* ── RESPONSIVE ── */
+
+/* Tablet: smaller slides */
+@media (max-width: 1024px) {
+  #deck { padding: 24px 24px; }
+}
+
+/* Mobile: switch to review (article) mode */
+@media (max-width: 768px) {
+  html { font-size: 15px; }
+  body { overflow-y: auto; }
+
+  #deck   { display: none; }
+  #review { display: flex; flex-direction: column; gap: 0; }
+
+  #ss-header {
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+  }
+  .ss-logo { font-size: 14px; }
+
+  #ss-progress-bar { display: block; }
+
+  .slide-article {
+    border-radius: 0;
+    border-left: none; border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--surface3);
+  }
+  .slide-article:first-child { border-top: none; }
+
+  .s-heading { font-size: 1.5rem; }
+  .s-hero-title { font-size: 1.6rem; }
+  .s-checks { grid-template-columns: 1fr; }
+  .s-2col { grid-template-columns: 1fr; }
+  .s-code { border-radius: 0; margin: 0 -20px; padding: 14px 20px; }
+  .s-body { padding: 14px 16px 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header id="ss-header">
+  <div class="ss-logo">${esc(docTitle)}</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="ss-count">${currentSlides.length} slides</span>
+    <span class="ss-meta" id="ss-date">${new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}</span>
+  </div>
+</header>
+
+<!-- Desktop: slides view -->
+<div id="deck">
+${slidesHtml}
+</div>
+
+<!-- Mobile: review / article view -->
+<div id="review">
+${reviewHtml}
+</div>
+
+<!-- Progress bar (mobile) -->
+<div id="ss-progress-bar"><div id="ss-progress-fill"></div></div>
+
+<script>
+// Scale slide canvases to fit their container
+function scaleAll() {
+  document.querySelectorAll('.ss-slide-wrap').forEach(wrap => {
+    const canvas = wrap.querySelector('.ss-canvas');
+    if (!canvas) return;
+    // Wrap the canvas in a .ss-frame if not already done
+    let frame = wrap.querySelector('.ss-frame');
+    if (!frame) {
+      frame = document.createElement('div');
+      frame.className = 'ss-frame';
+      wrap.insertBefore(frame, canvas);
+      frame.appendChild(canvas);
+    }
+    const scale = frame.clientWidth / 960;
+    canvas.style.transform = 'scale(' + scale + ')';
+    frame.style.height = (540 * scale) + 'px';
+  });
+}
+
+// Mobile scroll progress
+function updateProgress() {
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = total > 0 ? Math.round((window.scrollY / total) * 100) : 0;
+  const fill = document.getElementById('ss-progress-fill');
+  if (fill) fill.style.width = pct + '%';
+}
+
+window.addEventListener('resize', scaleAll);
+window.addEventListener('scroll', updateProgress, { passive: true });
+scaleAll();
+<\/script>
+</body>
+</html>`;
+
+    // ── 5. Trigger download ──
+    const blob = new Blob([out], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = fname + '.html';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    btn.textContent = '✓ Done!';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '⬇ HTML'; }, 2500);
+  } catch(e) {
+    console.error(e);
+    btn.textContent = '✗ Error';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '⬇ HTML'; }, 2500);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EDITOR ACTIONS
+// ═══════════════════════════════════════════════════════════════
+const EXAMPLE = [
+  {"type":"HERO","data":{"title":"HELLO iOS WORLD...","code":"print(\"Công nghệ lập trình App\")"}},
+  {"type":"PERSON_INTRO","data":{"heading":"HELLO!","heading_highlight":"I'm…","body_code":"print(\"\"\"\nXin chào! Tôi tên Thành,\nhay Tony bụng bự!\n\"\"\")"}},
+  {"type":"GRID_6","data":{"heading":"BẢNG","heading_highlight":"NỘI DUNG","items":["Chào mừng đến với khóa học.","Giới thiệu và làm quen.","Cần gì để học tốt!","Các tài nguyên học tập sẽ sử dụng.","Các công cụ học tập sẽ sử dụng.","Thiết lập & khởi động."]}},
+  {"type":"SECTION","data":{"number":"01","title":"CHÀO MỪNG","title_2":"ĐẾN VỚI KHÓA HỌC","description":"print(\"Rất nhiều điều thú vị về thế giới ứng dụng và lập trình đang chờ bạn…\")"}},
+  {"type":"CODE_QUESTION","data":{"heading":"BẠN CÓ THỂ","heading_highlight":"CHIA SẺ","body":"print(\"\"\"\nThế nào là một App (Ứng dụng di động) thành công\ndưới góc nhìn của bạn?\n\"\"\")"}},
+  {"type":"STAT_CARDS","data":{"heading":"HƯỚNG ĐẾN","heading_highlight":"MỤC TIÊU","stats":[{"value":"100%","label":"Thành thạo xây dựng ứng dụng trên iOS,macOS","color":"pink"},{"value":"100%","label":"Đạt được chứng nhận App Development with Swift","color":"purple"},{"value":"100%","label":"Có ứng dụng cá nhân và profiles cá nhân.","color":"sage"}]}},
+  {"type":"QUOTE","data":{"quote":"KHÔNG AI THÀNH CÔNG MÀ KHÔNG CÓ KỶ LUẬT","author":"Jim Rohn"}},
+  {"type":"TWO_COL","data":{"heading":"BẠN CÓ","heading_highlight":"NGẠC NHIÊN?","left_content":"Khóa học Công Nghệ Lập Trình App đem đến cho bạn kinh nghiệm làm việc với các công cụ và kỹ thuật cần thiết để xây dựng các ứng dụng iOS và MacOS từ mức cơ bản nhất.","right_items":["Các khái niệm khoa học máy tính.","Ngôn ngữ lập trình Swift và các Toolkit.","Nguyên lý thiết kế giao diện.","Công nghệ cùng ứng dụng và ảnh hưởng trong cuộc sống."]}},
+  {"type":"CONCEPT","data":{"heading":"import random — Mượn công cụ từ Python","analogy":{"label":"💡 Analogy","body":"Module = Hộp công cụ bên ngoài. import random = Mở hộp và lấy vào dùng."},"points":[{"term":"random.choice(seq)","desc":"Chọn ngẫu nhiên 1 phần tử từ chuỗi/list"},{"term":"random.shuffle(lst)","desc":"Xáo trộn list tại chỗ — trả về None!"}]}},
+  {"type":"DEMO","data":{"heading":"🖥️  Demo — random.choice() từng bước","code":[{"line":"import random","comment":"← Bước 1: import module"},{"line":"LETTERS = \"abcdefghijklmnopqrstuvwxyz\"","comment":"← Chuỗi ký tự"},{"line":"char = random.choice(LETTERS)","comment":"← Chọn ngẫu nhiên"},{"line":"print(\"Ký tự:\", char)","comment":"← In kết quả"}],"output":"Ký tự: m     ← mỗi lần chạy có thể khác nhau"}},
+  {"type":"ACTIVITY","data":{"mode":"code","heading":"🖥️  Code-Along — Bước 1: Skeleton","duration":"15","target":"Chương trình hỏi được độ dài và tạo chuỗi ký tự ngẫu nhiên","steps":["Tạo biến LETTERS_LOWER, LETTERS_UPPER, DIGITS","Dùng input() để hỏi người dùng độ dài mật khẩu","Dùng int() để chuyển đổi sang số nguyên","Chạy thử và kiểm tra kết quả"]}},
+  {"type":"CHECKPOINT","data":{"questions":["random.shuffle() trả về giá trị gì?","\"abc\"[1] cho kết quả gì?","Muốn chọn ngẫu nhiên 1 ký tự từ chuỗi, dùng hàm nào?"]}},
+  {"type":"SUMMARY","data":{"heading":"Hôm nay bạn đã làm được","items":["Phân tích bài toán trước khi code","Dùng import random để mở rộng Python","random.choice() và random.shuffle()","Xây dựng skeleton Password Generator"],"next":"Buổi 8 & 9: Hoàn thiện logic + đảm bảo đủ loại ký tự + commit GitHub"}},
+  {"type":"NEXT_LESSON","data":{"label":"Buổi tới:","heading":"Mật khẩu của bạn","heading_highlight":"thực sự mạnh chưa?","body":"Làm sao đảm bảo mật khẩu luôn có đủ chữ hoa, thường, số và ký tự đặc biệt?"}},
+  {"type":"TEAM_3","data":{"heading":"THẦY CÔ","heading_highlight":"ĐỒNG HÀNH CÙNG BẠN","members":[{"name":"Erika V.","bio":"Giảng viên chính, 5 năm kinh nghiệm lập trình iOS."},{"name":"John S.","bio":"Trợ giảng, chuyên gia SwiftUI và UIKit."},{"name":"Marie M.","bio":"Mentor dự án, ex-engineer tại Apple."}]}},
+  {"type":"THANK_YOU","data":{"question":"Do you have any questions?","org":"Học viện Công nghệ sáng tạo trẻ Teky","website":"https://teky.edu.vn"}}
+];
+
+function loadExample(){
+  const ta = document.getElementById('json-input');
+  if(ta) ta.value = JSON.stringify(EXAMPLE, null, 2);
+  parseAndRender();
+}
+function clearEditor(){
+  const ta = document.getElementById('json-input');
+  if(ta) ta.value = '';
+  parseAndRender();
+}
+function formatJSON(){
+  const ta = document.getElementById('json-input');
+  if(!ta) return;
+  try{ ta.value = JSON.stringify(JSON.parse(ta.value),null,2); }catch(e){}
+}
+
+// Input listener
+document.getElementById('json-input')?.addEventListener('input',()=>{
+  clearTimeout(window._db);
+  window._db = setTimeout(parseAndRender, 400);
+});
+document.getElementById('json-input')?.addEventListener('keydown',e=>{
+  if(e.key==='Tab'){ e.preventDefault(); const t=e.target,s=t.selectionStart; t.value=t.value.slice(0,s)+'  '+t.value.slice(t.selectionEnd); t.selectionStart=t.selectionEnd=s+2; }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════════════════════
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    const names=['json','ai','theme','struct'];
+    b.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p=>{
+    p.classList.toggle('active', p.id === name+'-pane');
+  });
+  if(name==='theme') buildThemePanel();
+  if(name==='struct') buildStructPanel();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// THEME EDITOR
+// ═══════════════════════════════════════════════════════════════
+const THEME_DEFAULTS = {
+  bg:'#16242F', surface:'#1F3240', surface2:'#243B4D', surface3:'#2A3F52',
+  dark:'#0E1C28', white:'#E8EDF2', muted:'#6B8A9E',
+  pink:'#EB8FD8', purple:'#BA94E9', sage:'#B9D4B4', coral:'#F46659',
+  amber:'#FFBC3E', green:'#1CC549', cyan:'#0097A7',
+};
+const THEME_GROUPS = {
+  bg:     ['bg','surface','surface2','surface3','dark'],
+  accent: ['pink','purple','sage','coral','amber','green','cyan'],
+  ui:     ['white','muted'],
+};
+const THEME_LABELS = {
+  bg:'Page BG', surface:'Card', surface2:'Card 2', surface3:'Border', dark:'Deep BG',
+  pink:'Pink', purple:'Purple', sage:'Sage', coral:'Coral', amber:'Amber', green:'Green', cyan:'Cyan',
+  white:'Text', muted:'Muted text',
+};
+let currentTheme = {...THEME_DEFAULTS};
+
+function applyTheme(){
+  const root = document.documentElement;
+  for(const [k,v] of Object.entries(currentTheme)){
+    root.style.setProperty('--'+k, v);
+    C[k] = v; PC[k] = v.replace('#','');
+  }
+  if(currentSlides) renderAll(currentSlides);
+}
+
+function buildThemePanel(){
+  const CONTAINERS = {
+    'bg-colors':     THEME_GROUPS.bg,
+    'accent-colors': THEME_GROUPS.accent,
+    'ui-colors':     THEME_GROUPS.ui,
+  };
+  for(const [id, keys] of Object.entries(CONTAINERS)){
+    const el = document.getElementById(id);
+    if(!el) continue;
+    el.innerHTML = keys.map(k => `
+      <div class="color-row">
+        <label title="${k}">${THEME_LABELS[k]||k}</label>
+        <input type="color" class="color-swatch" value="${currentTheme[k]}"
+          oninput="onColorInput('${k}',this.value)"
+          onchange="onColorInput('${k}',this.value)">
+        <input type="text" class="color-hex" value="${currentTheme[k]}"
+          maxlength="7" oninput="onHexInput('${k}',this)"
+          onblur="onHexBlur('${k}',this)">
+      </div>`).join('');
+  }
+}
+
+function onColorInput(key, val){
+  currentTheme[key] = val;
+  const keys = [...THEME_GROUPS.bg, ...THEME_GROUPS.accent, ...THEME_GROUPS.ui];
+  const idx = keys.indexOf(key);
+  const hexInputs = document.querySelectorAll('.color-hex');
+  if(hexInputs[idx]) hexInputs[idx].value = val;
+  applyTheme();
+}
+
+function onHexInput(key, input){
+  const val = input.value;
+  if(/^#[0-9a-fA-F]{6}$/.test(val)){
+    currentTheme[key] = val;
+    const keys = [...THEME_GROUPS.bg, ...THEME_GROUPS.accent, ...THEME_GROUPS.ui];
+    const idx = keys.indexOf(key);
+    const swatches = document.querySelectorAll('.color-swatch');
+    if(swatches[idx]) swatches[idx].value = val;
+    applyTheme();
+  }
+}
+
+function onHexBlur(key, input){
+  if(!/^#[0-9a-fA-F]{6}$/.test(input.value)) input.value = currentTheme[key];
+}
+
+function resetTheme(){
+  currentTheme = {...THEME_DEFAULTS};
+  applyTheme();
+  buildThemePanel();
+}
+
+function copyThemeCSS(){
+  const css = ':root {\n' +
+    Object.entries(currentTheme).map(([k,v])=>`  --${k}: ${v};`).join('\n') +
+    '\n}';
+  navigator.clipboard.writeText(css).then(()=>{
+    const b = document.querySelector('.theme-actions .mini-btn:last-child');
+    if(b){ b.textContent='✓ Copied!'; setTimeout(()=>b.textContent='⎘ Copy CSS',1500); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STRUCTURE PANEL
+// ═══════════════════════════════════════════════════════════════
+const STRUCT_TYPES = [
+  {type:'HERO',          color:'#EB8FD8', desc:'Slide mở đầu — tiêu đề lớn + code snippet',         fields:'title, code?'},
+  {type:'TITLE',         color:'#EB8FD8', desc:'Tiêu đề có label & subtitle',                        fields:'label?, title, subtitle?'},
+  {type:'PERSON_INTRO',  color:'#BA94E9', desc:'Giới thiệu người — code block + ảnh phải',           fields:'heading, heading_highlight, body_code'},
+  {type:'SECTION',       color:'#BA94E9', desc:'Phân mục với số thứ tự nổi bật',                     fields:'number, title, title_2?, description?'},
+  {type:'GRID_6',        color:'#BA94E9', desc:'Lưới 6 thẻ nội dung đánh số',                        fields:'heading, heading_highlight?, items[6]'},
+  {type:'CODE_QUESTION', color:'#0097A7', desc:'Câu hỏi thảo luận dạng code',                        fields:'heading, heading_highlight?, body'},
+  {type:'TWO_COL',       color:'#0097A7', desc:'Hai cột: văn bản trái, danh sách phải',              fields:'heading, left_content, right_items[]'},
+  {type:'STAT_CARDS',    color:'#FFBC3E', desc:'3 thẻ số liệu nổi bật',                             fields:'heading, stats[]{value,label,color}'},
+  {type:'IMAGE_TEXT',    color:'#B9D4B4', desc:'Văn bản trái + ảnh placeholder phải',               fields:'heading, body, link?'},
+  {type:'QUOTE',         color:'#B9D4B4', desc:'Trích dẫn nổi bật',                                 fields:'quote, author?'},
+  {type:'CONCEPT',       color:'#FFBC3E', desc:'Analogy + 2 định nghĩa/khái niệm',                  fields:'heading, analogy{label,body}, points[]{term,desc}'},
+  {type:'DEMO',          color:'#1CC549', desc:'Code demo từng dòng + output',                       fields:'heading, code[]{line,comment?}, output?'},
+  {type:'ACTIVITY',      color:'#0097A7', desc:'Hoạt động thực hành — thời gian + bước',            fields:'heading, mode, duration, target, steps[]'},
+  {type:'CHECKPOINT',    color:'#0097A7', desc:'Câu hỏi kiểm tra nhanh',                            fields:'questions[]'},
+  {type:'SUMMARY',       color:'#BA94E9', desc:'Tóm tắt bài học — checklist 4 điểm',               fields:'heading, items[4], next?'},
+  {type:'NEXT_LESSON',   color:'#1CC549', desc:'Teaser bài tiếp theo',                              fields:'label?, heading, heading_highlight?, body?'},
+  {type:'TEAM_3',        color:'#EB8FD8', desc:'Giới thiệu 3 thành viên',                           fields:'heading, members[]{name,bio}'},
+  {type:'THANK_YOU',     color:'#1CC549', desc:'Slide kết + thông tin liên hệ',                     fields:'question?, org?, website?'},
+  {type:'PREVIEW',       color:'#1CC549', desc:'Câu hỏi dẫn dắt / teaser',                          fields:'teaser?, question, hint?'},
+];
+
+const STRUCT_SAMPLES = {
+  HERO:          {title:'HELLO WORLD', code:'print("Xin chào!")'},
+  TITLE:         {label:'Buổi 1', title:'Lập trình là gì?', subtitle:'Khám phá thế giới code'},
+  PERSON_INTRO:  {heading:'HELLO!', heading_highlight:"I'm...", body_code:"print(\"\"\"\nTôi là giảng viên\n\"\"\")"},
+  SECTION:       {number:'01', title:'PHẦN MỘT', title_2:'Khái niệm cơ bản'},
+  GRID_6:        {heading:'NỘI DUNG', heading_highlight:'BÀI HỌC', items:['Chủ đề 1','Chủ đề 2','Chủ đề 3','Chủ đề 4','Chủ đề 5','Chủ đề 6']},
+  CODE_QUESTION: {heading:'CÂU HỎI', heading_highlight:'THẢO LUẬN', body:'print("""\nTheo bạn điều gì xảy ra?\n""")'},
+  TWO_COL:       {heading:'SO SÁNH', heading_highlight:'HAI CÁCH', left_content:'Cách 1: viết tay từng bước', right_items:['Bước A','Bước B','Bước C']},
+  STAT_CARDS:    {heading:'KẾT QUẢ', heading_highlight:'NỔI BẬT', stats:[{value:'95%',label:'Tỷ lệ hoàn thành',color:'pink'},{value:'42',label:'Bài tập',color:'purple'},{value:'100%',label:'Hài lòng',color:'sage'}]},
+  IMAGE_TEXT:    {heading:'VÍ DỤ', heading_highlight:'THỰC TẾ', body:'Ví dụ minh hoạ cho khái niệm vừa học.'},
+  QUOTE:         {quote:'CODE LÀ NGHỆ THUẬT CỦA TƯ DUY', author:'Anonymous'},
+  CONCEPT:       {heading:'Khái niệm mới', analogy:{label:'💡 Analogy',body:'Giải thích bằng ví dụ'}, points:[{term:'Thuật ngữ 1',desc:'Định nghĩa 1'},{term:'Thuật ngữ 2',desc:'Định nghĩa 2'}]},
+  DEMO:          {heading:'Demo — Từng bước', code:[{line:'x = 10',comment:'← khai báo'},{line:'print(x)',comment:'← in ra'}], output:'10'},
+  ACTIVITY:      {mode:'code', heading:'Code-Along', duration:'15', target:'Hoàn thành bài tập', steps:['Bước 1: Mở IDE','Bước 2: Viết code','Bước 3: Chạy thử']},
+  CHECKPOINT:    {questions:['Câu hỏi 1?','Câu hỏi 2?','Câu hỏi 3?']},
+  SUMMARY:       {heading:'Hôm nay đã học', items:['Điểm 1','Điểm 2','Điểm 3','Điểm 4'], next:'Buổi tới: chủ đề mới'},
+  NEXT_LESSON:   {label:'Buổi tới:', heading:'Chủ đề tiếp theo', heading_highlight:'sẽ là gì?', body:'Teaser nội dung'},
+  TEAM_3:        {heading:'ĐỘI NGŨ', heading_highlight:'GIẢNG DẠY', members:[{name:'GV A',bio:'Chuyên gia X'},{name:'GV B',bio:'Chuyên gia Y'},{name:'GV C',bio:'Chuyên gia Z'}]},
+  THANK_YOU:     {question:'Bạn có câu hỏi không?', org:'Tên tổ chức', website:'https://example.com'},
+  PREVIEW:       {teaser:'Câu hỏi dẫn dắt', question:'Điều gì xảy ra khi...?', hint:'Gợi ý: nghĩ về...'},
+};
+
+function buildStructPanel(){
+  const el = document.getElementById('struct-list');
+  if(!el || el.children.length > 0) return;
+  el.innerHTML = STRUCT_TYPES.map(t => `
+    <div class="struct-type" onclick="insertSample('${t.type}')" title="Click để chèn mẫu">
+      <span class="struct-type-badge" style="background:${t.color};color:#0e1c28">${t.type}</span>
+      <div class="struct-type-info">
+        <div class="struct-type-name">${t.type}</div>
+        <div class="struct-type-desc">${t.desc}</div>
+        <div class="struct-type-fields">{${t.fields}}</div>
+      </div>
+    </div>`).join('');
+}
+
+function insertSample(type){
+  const sample = STRUCT_SAMPLES[type];
+  if(!sample) return;
+  const ta = document.getElementById('json-input');
+  if(!ta) return;
+  let arr = [];
+  try { arr = JSON.parse(ta.value); if(!Array.isArray(arr)) arr = []; } catch(e){ arr = []; }
+  arr.push({type, data: sample});
+  ta.value = JSON.stringify(arr, null, 2);
+  parseAndRender();
+  switchTab('json');
+  ta.scrollTop = ta.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════════════════════════
+function getSystemPrompt(){
+  const typeList = STRUCT_TYPES.map(t=>`- ${t.type}: ${t.desc} | {${t.fields}}`).join('\n');
+  return `Bạn là AI chuyên chuyển nội dung giáo án thành JSON slides cho Slide Studio.\n\nOUTPUT: Chỉ xuất JSON array thuần túy. Không giải thích, không markdown fence.\nMỗi phần tử: {"type":"TYPE","data":{...}}\n\nCÁC SLIDE TYPES:\n${typeList}\n\nQUY TẮC:\nBài giảng: HERO → SECTION/GRID_6 → CONCEPT/DEMO/ACTIVITY/CHECKPOINT → SUMMARY → NEXT_LESSON\nWorkshop: HERO → ACTIVITY blocks → CHECKPOINT → SUMMARY\nThuyết trình: HERO → GRID_6 → nội dung → QUOTE → THANK_YOU\nÔn tập: TITLE → CHECKPOINT → CONCEPT → SUMMARY → PREVIEW\n\nKỸ THUẬT:\n- DEMO.code = [{line, comment?}]\n- ACTIVITY.mode: code|unplugged|discussion\n- STAT_CARDS.stats[].color: pink|purple|sage|coral|amber|green|cyan\n- Heading ngắn <8 từ, CAPS cho heading chính\n- Tối đa 20 slides\n- Giữ nguyên ngôn ngữ đầu vào`;
+}
+
+function copyPrompt(){
+  navigator.clipboard.writeText(getSystemPrompt()).then(()=>{
+    const b = document.querySelector('#struct-pane .mini-btn');
+    if(b){ b.textContent='✓ Copied!'; setTimeout(()=>b.textContent='📋 Copy System Prompt',1800); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI CONVERT
+// ═══════════════════════════════════════════════════════════════
+async function runAIConvert(){
+  const source   = document.getElementById('ai-source')?.value.trim();
+  const style    = document.getElementById('ai-style')?.value || 'lesson';
+  const statusEl = document.getElementById('ai-status');
+  const btn      = document.getElementById('ai-run-btn');
+  if(!source){ statusEl.textContent='⚠ Vui lòng nhập nội dung'; statusEl.className='ai-status err'; return; }
+  btn.disabled = true;
+  statusEl.className = 'ai-status thinking';
+  statusEl.textContent = '✨ AI đang xử lý…';
+  const labels = {lesson:'bài giảng',workshop:'workshop',presentation:'thuyết trình',review:'ôn tập'};
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:8000,
+        system: getSystemPrompt(),
+        messages:[{role:'user',content:`Phong cách: ${labels[style]||style}\n\nNội dung:\n\n${source}`}]
+      })
+    });
+    if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e?.error?.message||'HTTP '+res.status); }
+    const data = await res.json();
+    const raw  = (data.content||[]).map(b=>b.text||'').join('').trim();
+    const clean = raw.replace(/^```[a-z]*\n?/,'').replace(/\n?```$/,'').trim();
+    const parsed = JSON.parse(clean);
+    if(!Array.isArray(parsed)) throw new Error('AI không trả về array');
+    const ta = document.getElementById('json-input');
+    ta.value = JSON.stringify(parsed, null, 2);
+    parseAndRender();
+    switchTab('json');
+    statusEl.className='ai-status done';
+    statusEl.textContent=`✓ Tạo ${parsed.length} slides thành công`;
+  } catch(e){
+    console.error(e);
+    statusEl.className='ai-status err';
+    statusEl.textContent='✗ '+(e.message||'Lỗi').slice(0,80);
+  } finally { btn.disabled=false; }
+}
+
+// Init
+loadExample();
+</script>
+</body>
+</html>
