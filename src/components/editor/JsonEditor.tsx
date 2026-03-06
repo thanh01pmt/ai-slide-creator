@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/Button";
-import { FileCode, FileJson, Layers, Monitor, Play, Sparkles, Palette, SquareSlash } from 'lucide-react';
+import { FileCode } from 'lucide-react';
+
 
 interface JsonEditorProps {
     value: string;
